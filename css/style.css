@@ -1180,17 +1180,65 @@ ul { list-style: none; }
   }
   .toast { min-width: unset; max-width: 100%; width: 100%; }
 
+  /* Stats grid — 2×2 on mobile */
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .stat-card  { padding: 12px 14px; gap: 10px; }
+  .stat-value { font-size: 1.2rem; }
+  .stat-icon  { width: 38px; height: 38px; font-size: 1rem; }
+
+  /* POS layout — vertical scroll, no overflow clip */
+  .pos-layout {
+    flex-direction: column !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    height: auto !important;
+  }
+  .pos-main {
+    flex: 0 0 auto !important;
+    overflow: visible !important;
+    padding: 10px 12px !important;
+  }
+  .pos-cart {
+    flex: 0 0 auto !important;
+    max-height: none !important;
+    border-left: none !important;
+    border-top: 2px solid var(--border) !important;
+  }
+  /* Product cards bigger touch target */
+  .product-card { padding: 10px 8px; }
+  .product-emoji { width: 50px; height: 50px; font-size: 1.7rem; }
+
   /* Inventory */
   .inv-layout { padding: 12px; }
-  .form-row   { grid-template-columns: 1fr; gap: 0; }
-  .data-table { min-width: 400px; }
+  .inv-controls { flex-wrap: wrap; }
+  .inv-controls .inv-search { flex: 1 1 100%; }
+  .inv-controls .btn-primary { width: 100%; justify-content: center; }
+  .form-row { grid-template-columns: 1fr; gap: 0; }
+
+  /* Table — hide barcode(2) status(5) date(6), compact padding */
+  .data-table { min-width: 300px; font-size: 0.85rem; }
   .data-table th:nth-child(2), .data-table td:nth-child(2),
+  .data-table th:nth-child(5), .data-table td:nth-child(5),
   .data-table th:nth-child(6), .data-table td:nth-child(6) { display: none; }
-  .data-table th, .data-table td { padding: 10px; }
+  .data-table th, .data-table td { padding: 8px 8px; }
+  /* Hide icon in name cell to save width */
+  .prod-table-icon, .prod-row-img { display: none !important; }
+  .prod-name-cell { gap: 0; }
+  .prod-cat-text  { font-size: 0.72rem; }
+  /* Compact action buttons */
+  .action-cell { gap: 4px; flex-wrap: wrap; }
+  .action-cell .btn-sm { padding: 4px 8px; font-size: 0.78rem; }
+
   .gapi-bar { flex-direction: column; align-items: flex-start; gap: 8px; }
   .gapi-bar-inputs { flex-direction: column; width: 100%; }
   .gapi-bar-inputs input { width: 100%; }
-  .inv-controls .btn-primary { width: 100%; justify-content: center; }
+
+  /* Sales */
+  .sales-toolbar { flex-direction: column; align-items: stretch; gap: 8px; }
 
   /* Forms */
   .modal-body, .modal-header, .modal-footer { padding-left: 16px; padding-right: 16px; }
