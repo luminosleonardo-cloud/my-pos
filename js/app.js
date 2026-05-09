@@ -186,6 +186,21 @@ function renderCartFooter() {
   if (totalEl)  totalEl.textContent  = `฿${fmt(total)}`;
   if (checkBtn) checkBtn.disabled = cart.length === 0;
 
+  /* mobile cart bar */
+  const mbar = document.getElementById('mobile-cart-bar');
+  if (mbar) {
+    const qty = cart.reduce((s, i) => s + i.qty, 0);
+    if (qty > 0) {
+      mbar.classList.remove('hidden');
+      const mcbCount = document.getElementById('mcb-count');
+      const mcbTotal = document.getElementById('mcb-total');
+      if (mcbCount) mcbCount.textContent = qty;
+      if (mcbTotal) mcbTotal.textContent = `฿${fmt(total)}`;
+    } else {
+      mbar.classList.add('hidden');
+    }
+  }
+
   if (disc > 0) {
     if (subEl)    subEl.textContent    = `฿${fmt(sub)}`;
     if (discEl)   discEl.textContent   = `-฿${fmt(disc)}`;
