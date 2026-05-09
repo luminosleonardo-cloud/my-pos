@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>ร้านขายของชำ — POS</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#16a34a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="POS ชำ">
+  <link rel="apple-touch-icon" href="icons/icon.svg">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body>
+
+  <div class="app-shell">
+
+    <!-- ========== SIDEBAR ========== -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon">🛒</div>
+        <span class="brand-name" id="brand-name">ร้านขายของชำ</span>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="index.html" class="sidebar-link active">
+          <span class="sl-icon">🛒</span>
+          <span class="sl-label">หน้าขาย (POS)</span>
+        </a>
+        <a href="inventory.html" class="sidebar-link">
+          <span class="sl-icon">📦</span>
+          <span class="sl-label">คลังสินค้า</span>
+          <span id="inv-badge" class="inv-badge" style="display:none">0</span>
+        </a>
+        <a href="sales.html" class="sidebar-link">
+          <span class="sl-icon">📊</span>
+          <span class="sl-label">ประวัติการขาย</span>
+        </a>
+        <a href="#" class="sidebar-link" onclick="openHwSettings();return false">
+          <span class="sl-icon">⚙️</span>
+          <span class="sl-label">ตั้งค่าฮาร์ดแวร์</span>
+          <span id="hw-indicator" class="hw-dot"></span>
+        </a>
+        <a href="#" class="sidebar-link" onclick="openSettingsModal();return false">
+          <span class="sl-icon">🏪</span>
+          <span class="sl-label">ตั้งค่าร้าน</span>
+        </a>
+        <a href="#" class="sidebar-link" onclick="openShiftModal();return false">
+          <span class="sl-icon">⏰</span>
+          <span class="sl-label" id="shift-link-text">เปิด/ปิดกะ</span>
+          <span id="shift-indicator" class="hw-dot"></span>
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <span id="clock" class="sidebar-clock"></span>
+      </div>
+    </aside>
+
+    <!-- ========== MAIN ========== -->
+    <main class="app-main">
+
+      <div class="pos-layout">
+
+        <!-- Left: Products -->
+        <div class="pos-main">
+
+          <!-- Search row -->
+          <div class="search-row">
+            <div class="search-box">
+              <span class="search-icon">🔍</span>
+              <input id="search-input" type="text"
+                     placeholder="ค้นหาสินค้า หรือพิมพ์บาร์โค้ด…" autocomplete="off">
+            </div>
+            <button class="btn-scan" onclick="openCameraScanner()">
+              📷 สแกนกล้อง
+            </button>
+          </div>
+
+          <!-- Category tabs -->
+          <div id="category-tabs" class="category-tabs"></div>
+
+          <!-- Product grid -->
+          <div id="product-grid" class="product-grid"></div>
+
+        </div>
+
+        <!-- Right: Cart -->
+        <div class="pos-cart">
+
+          <div class="cart-header">
+            <div class="cart-title">
+              🛍️ ตะกร้าสินค้า
+              <span id="cart-count" class="cart-count">0</span>
+            </div>
+            <button class="btn-clear-cart" onclick="clearCart()">ล้างทั้งหมด</button>
+          </div>
+
+          <div id="cart-items" class="cart-items"></div>
+
+          <div class="cart-footer">
+            <!-- Discount row -->
+            <div class="cart-discount-row">
+              <button id="disc-type-btn" class="disc-type-btn" onclick="toggleDiscountType()" title="สลับ ฿ / %">฿</button>
+              <input id="disc-value" class="disc-input" type="number" min="0" step="any"
+                     placeholder="ส่วนลด...">
+            </div>
+
+            <div class="cart-summary">
+              <div class="summary-row" id="row-subtotal" style="display:none">
+                <span>ราคาก่อนลด</span>
+                <span id="cart-subtotal"></span>
+              </div>
+              <div class="summary-row" id="row-discount" style="display:none">
+                <span id="disc-row-label">ส่วนลด</span>
+                <span id="cart-discount-amt" style="color:var(--danger)"></span>
+              </div>
+              <div class="summary-row total">
+                <span>ยอดที่ต้องชำระ</span>
+                <span id="cart-total" class="total-amt">฿0.00</span>
+              </div>
+            </div>
+            <button id="btn-open-drawer" class="btn-open-drawer" style="display:none"
+                    onclick="Printer.openDrawer()">
+              💰 เปิดลิ้นชัก
+            </button>
+            <button id="btn-checkout" class="btn-checkout" onclick="openPayment()" disabled>
+              💳 ชำระเงิน (F2)
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+
+    </main>
+
+  </div><!-- /app-shell -->
+
+  <!-- ========== MODAL: Camera Scanner ========== -->
+  <div id="modal-camera" class="modal-backdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">📷 สแกนบาร์โค้ดด้วยกล้อง</span>
+        <button class="modal-close" onclick="closeCameraScanner()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:12px;text-align:center">
+          จ่อกล้องไปที่บาร์โค้ดสินค้า ระบบจะสแกนอัตโนมัติ
+        </p>
+        <div id="reader"></div>
+        <p style="font-size:0.78rem;color:var(--text-light);margin-top:10px;text-align:center">
+          รองรับ EAN-13 · EAN-8 · UPC-A · CODE-128
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeCameraScanner()">ปิด</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL: Payment ========== -->
+  <div id="modal-payment" class="modal-backdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">💳 ชำระเงิน</span>
+        <button class="modal-close" onclick="closeModal('modal-payment')">✕</button>
+      </div>
+      <div class="modal-body">
+
+        <div class="payment-total">
+          <div id="pay-discount-info" class="pay-discount-info" style="display:none">
+            <span>ราคาก่อนลด ฿<span id="pay-subtotal-show"></span></span>
+            <span class="pay-disc-badge" id="pay-disc-show"></span>
+          </div>
+          <div class="pt-label">ยอดที่ต้องชำระ</div>
+          <div class="pt-amount" id="pay-total-amt">0.00</div>
+          <div class="pt-unit">บาท</div>
+        </div>
+
+        <!-- Payment method tabs -->
+        <div class="pay-tabs">
+          <button id="tab-cash" class="pay-tab active" onclick="switchPayMethod('cash')">💵 เงินสด</button>
+          <button id="tab-qr"   class="pay-tab"        onclick="switchPayMethod('qr')">📱 PromptPay QR</button>
+        </div>
+
+        <!-- Cash section -->
+        <div id="pay-cash-section">
+          <div class="form-group">
+            <label class="form-label">รับเงินมา (บาท)</label>
+            <div class="input-group">
+              <span class="input-addon input-addon-left">฿</span>
+              <input id="pay-cash" class="form-input" type="number"
+                     min="0" step="0.01" placeholder="ระบุจำนวนเงิน">
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+              <button class="btn btn-ghost btn-sm" onclick="setCash(20)">฿20</button>
+              <button class="btn btn-ghost btn-sm" onclick="setCash(50)">฿50</button>
+              <button class="btn btn-ghost btn-sm" onclick="setCash(100)">฿100</button>
+              <button class="btn btn-ghost btn-sm" onclick="setCash(500)">฿500</button>
+              <button class="btn btn-ghost btn-sm" onclick="setCash(1000)">฿1,000</button>
+            </div>
+          </div>
+          <div id="change-box" class="change-box">
+            <span class="change-label">เงินทอน</span>
+            <span id="change-amount" class="change-amount">—</span>
+          </div>
+        </div>
+
+        <!-- PromptPay QR section -->
+        <div id="pay-qr-section" style="display:none">
+          <div class="qr-display">
+            <div id="qr-canvas-wrap" class="qr-canvas-wrap"></div>
+            <p class="qr-number">PromptPay: <strong id="qr-promptpay-no"></strong></p>
+            <p class="qr-hint">สแกน QR แล้วกดยืนยันเมื่อชำระเสร็จ</p>
+          </div>
+        </div>
+
+        <!-- Bill note (always visible) -->
+        <div class="form-group" style="margin-top:10px">
+          <label class="form-label" style="color:var(--text-muted)">
+            หมายเหตุ <span style="font-weight:400;font-size:0.8rem">(ไม่บังคับ)</span>
+          </label>
+          <input id="bill-note" class="form-input" type="text" maxlength="100"
+                 placeholder="เช่น ลูกค้าขาประจำ, ส่งของบ้าน…">
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal('modal-payment')">ยกเลิก</button>
+        <button id="btn-confirm-pay" class="btn btn-primary btn-lg"
+                onclick="confirmPayment()" disabled>
+          ✅ ยืนยันชำระเงิน
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL: Receipt ========== -->
+  <div id="modal-receipt" class="modal-backdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">🧾 ใบเสร็จรับเงิน</span>
+        <button class="modal-close" onclick="closeModal('modal-receipt')">✕</button>
+      </div>
+      <div id="print-receipt" class="modal-body">
+        <div id="receipt-content"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="window.print()">🖨️ พิมพ์ (PDF)</button>
+        <button id="btn-thermal-print" class="btn btn-outline" style="display:none"
+                onclick="thermalPrintLastReceipt()">🖨️ พิมพ์ความร้อน</button>
+        <button class="btn btn-primary" onclick="closeModal('modal-receipt')">ปิด</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL: Hardware Settings ========== -->
+  <div id="modal-hw" class="modal-backdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">⚙️ ตั้งค่าฮาร์ดแวร์</span>
+        <button class="modal-close" onclick="closeModal('modal-hw')">✕</button>
+      </div>
+      <div class="modal-body">
+
+        <!-- Printer section -->
+        <div class="hw-section">
+          <div class="hw-section-title">🖨️ เครื่องพิมพ์ความร้อน (ESC/POS)</div>
+          <div class="hw-connect-row">
+            <span id="hw-status" class="hw-status">🔴 ยังไม่เชื่อมต่อ</span>
+            <button id="btn-hw-connect" class="btn btn-primary btn-sm"
+                    onclick="connectPrinter()">🔌 เชื่อมต่อ</button>
+            <button id="btn-hw-disconnect" class="btn btn-ghost btn-sm" style="display:none"
+                    onclick="disconnectPrinter()">ตัดการเชื่อมต่อ</button>
+          </div>
+          <p class="hw-note">⚠️ ต้องใช้ Chrome หรือ Edge — ไม่รองรับ Firefox / Safari</p>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">ขนาดกระดาษ</label>
+            <select id="hw-paper" class="form-input form-select" onchange="Printer.saveSettingsUI()">
+              <option value="58">58 มม.</option>
+              <option value="80">80 มม.</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Baud Rate</label>
+            <select id="hw-baud" class="form-input form-select" onchange="Printer.saveSettingsUI()">
+              <option value="9600">9600</option>
+              <option value="19200">19200</option>
+              <option value="38400">38400</option>
+              <option value="115200">115200</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Drawer section -->
+        <div class="hw-section">
+          <div class="hw-section-title">💰 ลิ้นชักเงิน</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">การเปิดลิ้นชัก</label>
+              <select id="hw-drawer" class="form-input form-select" onchange="Printer.saveSettingsUI()">
+                <option value="auto">เปิดอัตโนมัติเมื่อชำระเงิน</option>
+                <option value="manual">ต้องกดปุ่มเปิดเอง</option>
+                <option value="off">ปิด</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Drawer Port</label>
+              <select id="hw-drawer-pin" class="form-input form-select" onchange="Printer.saveSettingsUI()">
+                <option value="0">RJ11 Pin 2 (ทั่วไป)</option>
+                <option value="1">RJ11 Pin 5</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bluetooth section -->
+        <div class="hw-section">
+          <div class="hw-section-title">🔵 บลูทูธ (BLE Printer)</div>
+          <div class="hw-connect-row">
+            <button id="btn-hw-connect-bt" class="btn btn-primary btn-sm"
+                    onclick="connectBtPrinter()">🔵 เชื่อมต่อบลูทูธ</button>
+            <button id="btn-hw-disconnect-bt" class="btn btn-ghost btn-sm" style="display:none"
+                    onclick="disconnectBtPrinter()">ตัดการเชื่อมต่อ BT</button>
+          </div>
+          <p class="hw-note">รองรับ Xprinter, HOIN, RPP และเครื่องพิมพ์ BLE ทั่วไป — ต้องใช้ Chrome</p>
+        </div>
+
+        <!-- Test -->
+        <div class="hw-test-row">
+          <button class="btn btn-outline btn-sm" onclick="Printer.testPrint()">🖨️ พิมพ์ทดสอบ</button>
+          <button class="btn btn-outline btn-sm" onclick="Printer.openDrawer()">💰 ทดสอบลิ้นชัก</button>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal('modal-hw')">ปิด</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL: Shop Settings ========== -->
+  <div id="modal-settings" class="modal-backdrop">
+    <div class="modal modal-wide">
+      <div class="modal-header">
+        <span class="modal-title">🏪 ตั้งค่าร้าน</span>
+        <button class="modal-close" onclick="closeModal('modal-settings')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group" style="flex:1">
+            <label class="form-label">ชื่อร้าน *</label>
+            <input id="set-shop-name" class="form-input" type="text" placeholder="เช่น ร้านขายของชำสมใจ">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">ที่อยู่</label>
+          <input id="set-address" class="form-input" type="text" placeholder="เช่น 123 ถ.สุขุมวิท กรุงเทพ">
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="flex:1">
+            <label class="form-label">เบอร์โทรศัพท์</label>
+            <input id="set-phone" class="form-input" type="tel" placeholder="0812345678">
+          </div>
+          <div class="form-group" style="flex:1">
+            <label class="form-label">เลขผู้เสียภาษี</label>
+            <input id="set-taxid" class="form-input" type="text" placeholder="1234567890123">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">เบอร์ PromptPay</label>
+          <input id="set-promptpay" class="form-input" type="tel" placeholder="0812345678 หรือเลขบัตร 13 หลัก">
+          <p style="font-size:0.78rem;color:var(--text-muted);margin-top:4px">ใช้แสดง QR สำหรับรับชำระเงิน</p>
+        </div>
+        <div class="form-group">
+          <label class="form-label">ข้อความท้ายใบเสร็จ</label>
+          <input id="set-footer" class="form-input" type="text" placeholder="ขอบคุณที่ใช้บริการ">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal('modal-settings')">ยกเลิก</button>
+        <button class="btn btn-primary" onclick="saveSettingsForm()">💾 บันทึก</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL: Open Shift ========== -->
+  <div id="modal-shift-open" class="modal-backdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">⏰ เปิดกะ</span>
+        <button class="modal-close" onclick="closeModal('modal-shift-open')">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:16px">
+          นับเงินในลิ้นชักก่อนเปิดกะ แล้วระบุจำนวนด้านล่าง
+        </p>
+        <div class="form-group">
+          <label class="form-label">เงินเปิดกะ (บาท)</label>
+          <div class="input-group">
+            <span class="input-addon input-addon-left">฿</span>
+            <input id="shift-start-cash" class="form-input" type="number"
+                   min="0" step="0.01" placeholder="0.00">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal('modal-shift-open')">ยกเลิก</button>
+        <button class="btn btn-primary btn-lg" onclick="confirmOpenShift()">▶ เปิดกะ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL: Close Shift ========== -->
+  <div id="modal-shift-close" class="modal-backdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">⏹ ปิดกะ</span>
+        <button class="modal-close" onclick="closeModal('modal-shift-close')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="shift-summary">
+          <div class="ss-row"><span>เปิดกะเมื่อ</span><span id="shift-close-opened">—</span></div>
+          <div class="ss-row"><span>เงินเปิดกะ</span><span id="shift-close-startcash">—</span></div>
+          <div class="ss-row"><span>จำนวนบิล</span><span id="shift-close-sales">—</span></div>
+          <div class="ss-row"><span>ยอดขายรวม</span><span id="shift-close-total">—</span></div>
+          <div class="ss-row ss-total"><span>เงินที่ควรมี</span><span id="shift-close-expected">—</span></div>
+        </div>
+        <div class="form-group" style="margin-top:16px">
+          <label class="form-label">เงินที่นับได้จริง (บาท)</label>
+          <div class="input-group">
+            <span class="input-addon input-addon-left">฿</span>
+            <input id="shift-close-actual" class="form-input" type="number"
+                   min="0" step="0.01" placeholder="0.00" oninput="calcDiscrepancy()">
+          </div>
+        </div>
+        <div class="change-box" style="margin-top:8px">
+          <span class="change-label">ส่วนต่าง</span>
+          <span id="shift-close-discrepancy" class="change-amount">—</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal('modal-shift-close')">ยกเลิก</button>
+        <button class="btn btn-danger" onclick="confirmCloseShift()">⏹ ปิดกะ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL: Shift Summary ========== -->
+  <div id="modal-shift-summary" class="modal-backdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">📊 สรุปกะ</span>
+        <button class="modal-close" onclick="closeModal('modal-shift-summary')">✕</button>
+      </div>
+      <div id="shift-summary-content" class="modal-body"></div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="closeModal('modal-shift-summary')">ปิด</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast container -->
+  <div id="toast-container"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/shared.js"></script>
+  <script src="js/barcode.js"></script>
+  <script src="js/printer.js"></script>
+  <script src="js/promptpay.js"></script>
+  <script>
+    function setCash(amount) {
+      document.getElementById('pay-cash').value = amount;
+      updateChange();
+    }
+  </script>
+  <script src="js/app.js"></script>
+  <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');</script>
+</body>
+</html>
