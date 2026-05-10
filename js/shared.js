@@ -60,6 +60,10 @@ function openSettingsModal() {
   document.getElementById('set-footer').value    = s.footer    || '';
   const geminiEl = document.getElementById('set-gemini-key');
   if (geminiEl) geminiEl.value = localStorage.getItem('gemini_api_key') || '';
+  const shopIdEl = document.getElementById('set-shop-id');
+  if (shopIdEl) shopIdEl.value = (typeof Sync !== 'undefined' ? Sync.getShopId() : localStorage.getItem('shop_id')) || '';
+  const fbEl = document.getElementById('set-firebase-config');
+  if (fbEl) fbEl.value = localStorage.getItem('firebase_config') || '';
   openModal('modal-settings');
 }
 
@@ -74,6 +78,16 @@ function saveSettingsForm() {
   });
   const geminiEl = document.getElementById('set-gemini-key');
   if (geminiEl) localStorage.setItem('gemini_api_key', geminiEl.value.trim());
+  const shopIdEl = document.getElementById('set-shop-id');
+  if (shopIdEl && shopIdEl.value.trim()) {
+    if (typeof Sync !== 'undefined') Sync.setShopId(shopIdEl.value);
+    else localStorage.setItem('shop_id', shopIdEl.value.trim().toUpperCase());
+  }
+  const fbEl = document.getElementById('set-firebase-config');
+  if (fbEl && fbEl.value.trim()) {
+    localStorage.setItem('firebase_config', fbEl.value.trim());
+    if (typeof Sync !== 'undefined') Sync.init();
+  }
   const bn = document.getElementById('brand-name');
   if (bn) bn.textContent = DB.getSettings().shopName || 'ร้านขายของชำ';
   closeModal('modal-settings');
@@ -221,6 +235,24 @@ function _injectSharedModals() {
           <input id="set-gemini-key" class="form-input" type="password" placeholder="AIza…" autocomplete="off">
           <p style="font-size:0.78rem;color:var(--text-muted);margin-top:4px">รับ Key ฟรีได้ที่ <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--primary)">aistudio.google.com</a> — เก็บในเครื่องของคุณเท่านั้น</p>
         </div>
+        <hr style="margin:16px 0;border-color:var(--border)">
+        <div class="form-group">
+          <label class="form-label">☁️ Shop ID <span style="font-weight:400;color:var(--text-muted)">(ใส่ ID เดียวกันทุกอุปกรณ์เพื่อซิงค์ข้อมูล)</span></label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input id="set-shop-id" class="form-input" type="text" placeholder="SHOP ID" autocomplete="off" style="font-family:monospace;font-weight:700;letter-spacing:0.1em">
+            <button class="btn btn-outline btn-sm" type="button" onclick="copyShopId()" style="white-space:nowrap">📋 คัดลอก</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Firebase Config <span style="font-weight:400;color:var(--text-muted)">(JSON จาก Firebase Console)</span></label>
+          <textarea id="set-firebase-config" class="form-input" rows="4"
+            placeholder='{"apiKey":"…","authDomain":"…","projectId":"…","storageBucket":"…","messagingSenderId":"…","appId":"…"}'
+            style="font-family:monospace;font-size:0.78rem;resize:vertical"></textarea>
+          <p style="font-size:0.78rem;color:var(--text-muted);margin-top:4px">
+            Firebase Console → Project Settings → Your apps → SDK setup → Config
+            · <a href="https://console.firebase.google.com/" target="_blank" style="color:var(--primary)">console.firebase.google.com</a>
+          </p>
+        </div>
       </div>
       <div class="modal-footer" style="justify-content:space-between;align-items:center">
         <span style="font-size:0.72rem;color:var(--text-muted);opacity:0.6">${APP_VERSION}</span>
@@ -319,6 +351,14 @@ function _injectSharedModals() {
 }
 
 const APP_VERSION = 'v1.2.0';
+
+function copyShopId() {
+  const id = document.getElementById('set-shop-id')?.value || localStorage.getItem('shop_id') || '';
+  if (!id) return;
+  navigator.clipboard.writeText(id).then(() => {
+    if (typeof showToast === 'function') showToast('คัดลอก Shop ID แล้ว');
+  });
+}
 
 /* ---- Init ---- */
 document.addEventListener('DOMContentLoaded', () => {

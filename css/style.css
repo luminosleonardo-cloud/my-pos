@@ -2085,6 +2085,31 @@ ul { list-style: none; }
 .btn-checkout { position: relative; }
 
 /* ============================================================
+   Sync status dot (sidebar brand)
+   ============================================================ */
+.sync-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-left: 6px;
+  flex-shrink: 0;
+  transition: background 0.3s;
+  background: transparent;
+}
+.sync-dot[data-s="syncing"] {
+  background: #facc15;
+  animation: sync-pulse 1s ease-in-out infinite;
+}
+.sync-dot[data-s="synced"]  { background: #4ade80; }
+.sync-dot[data-s="error"]   { background: #f87171; }
+
+@keyframes sync-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+/* ============================================================
    App Version Badge (sidebar footer)
    ============================================================ */
 .app-version {

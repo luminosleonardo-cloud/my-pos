@@ -23,6 +23,7 @@
       <div class="sidebar-brand">
         <div class="brand-icon">🛒</div>
         <span class="brand-name" id="brand-name">ร้านขายของชำ</span>
+        <span id="sync-dot" class="sync-dot" title="ไม่ได้เชื่อมต่อ cloud"></span>
       </div>
       <nav class="sidebar-nav">
         <a href="index.html" class="sidebar-link active">
@@ -397,6 +398,24 @@
           <input id="set-gemini-key" class="form-input" type="password" placeholder="AIza…" autocomplete="off">
           <p style="font-size:0.78rem;color:var(--text-muted);margin-top:4px">รับ Key ฟรีได้ที่ <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--primary)">aistudio.google.com</a> — เก็บในเครื่องของคุณเท่านั้น</p>
         </div>
+        <hr style="margin:16px 0;border-color:var(--border)">
+        <div class="form-group">
+          <label class="form-label">☁️ Shop ID <span style="font-weight:400;color:var(--text-muted)">(ใส่ ID เดียวกันทุกอุปกรณ์เพื่อซิงค์ข้อมูล)</span></label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input id="set-shop-id" class="form-input" type="text" placeholder="SHOP ID" autocomplete="off" style="font-family:monospace;font-weight:700;letter-spacing:0.1em">
+            <button class="btn btn-outline btn-sm" type="button" onclick="copyShopId()" style="white-space:nowrap">📋 คัดลอก</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Firebase Config <span style="font-weight:400;color:var(--text-muted)">(JSON จาก Firebase Console)</span></label>
+          <textarea id="set-firebase-config" class="form-input" rows="4"
+            placeholder='{"apiKey":"…","authDomain":"…","projectId":"…","storageBucket":"…","messagingSenderId":"…","appId":"…"}'
+            style="font-family:monospace;font-size:0.78rem;resize:vertical"></textarea>
+          <p style="font-size:0.78rem;color:var(--text-muted);margin-top:4px">
+            Firebase Console → Project Settings → Your apps → SDK setup → Config
+            · <a href="https://console.firebase.google.com/" target="_blank" style="color:var(--primary)">console.firebase.google.com</a>
+          </p>
+        </div>
       </div>
       <div class="modal-footer" style="justify-content:space-between;align-items:center">
         <span id="settings-version" style="font-size:0.72rem;color:var(--text-muted);opacity:0.6"></span>
@@ -488,8 +507,11 @@
   <div id="toast-container"></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="js/db.js"></script>
   <script src="js/shared.js"></script>
+  <script src="js/sync.js"></script>
   <script src="js/agents.js"></script>
   <script src="js/barcode.js"></script>
   <script src="js/printer.js"></script>
@@ -501,6 +523,9 @@
     }
   </script>
   <script src="js/app.js"></script>
-  <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');</script>
+  <script>
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
+    document.addEventListener('DOMContentLoaded', () => Sync.init());
+  </script>
 </body>
 </html>

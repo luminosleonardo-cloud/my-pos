@@ -22,6 +22,7 @@
       <div class="sidebar-brand">
         <div class="brand-icon">📊</div>
         <span class="brand-name" id="brand-name">ร้านขายของชำ</span>
+        <span id="sync-dot" class="sync-dot" title="ไม่ได้เชื่อมต่อ cloud"></span>
       </div>
       <nav class="sidebar-nav">
         <a href="index.html" class="sidebar-link">
@@ -120,10 +121,16 @@
   <!-- Toast container -->
   <div id="toast-container"></div>
 
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="js/db.js"></script>
   <script src="js/shared.js"></script>
+  <script src="js/sync.js"></script>
   <script src="js/agents.js"></script>
   <script src="js/sales.js"></script>
-  <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');</script>
+  <script>
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
+    document.addEventListener('DOMContentLoaded', () => Sync.init());
+  </script>
 </body>
 </html>

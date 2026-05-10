@@ -481,6 +481,10 @@ function openSettingsModal() {
   document.getElementById('set-footer').value    = s.footer    || '';
   const geminiEl = document.getElementById('set-gemini-key');
   if (geminiEl) geminiEl.value = localStorage.getItem('gemini_api_key') || '';
+  const shopIdEl = document.getElementById('set-shop-id');
+  if (shopIdEl) shopIdEl.value = (typeof Sync !== 'undefined' ? Sync.getShopId() : localStorage.getItem('shop_id')) || '';
+  const fbEl = document.getElementById('set-firebase-config');
+  if (fbEl) fbEl.value = localStorage.getItem('firebase_config') || '';
   const verEl = document.getElementById('settings-version');
   if (verEl && typeof APP_VERSION !== 'undefined') verEl.textContent = APP_VERSION;
   openModal('modal-settings');
@@ -497,6 +501,16 @@ function saveSettingsForm() {
   });
   const geminiEl = document.getElementById('set-gemini-key');
   if (geminiEl) localStorage.setItem('gemini_api_key', geminiEl.value.trim());
+  const shopIdEl = document.getElementById('set-shop-id');
+  if (shopIdEl && shopIdEl.value.trim()) {
+    if (typeof Sync !== 'undefined') Sync.setShopId(shopIdEl.value);
+    else localStorage.setItem('shop_id', shopIdEl.value.trim().toUpperCase());
+  }
+  const fbEl = document.getElementById('set-firebase-config');
+  if (fbEl && fbEl.value.trim()) {
+    localStorage.setItem('firebase_config', fbEl.value.trim());
+    if (typeof Sync !== 'undefined') Sync.init();
+  }
   const bn = document.getElementById('brand-name');
   if (bn) bn.textContent = DB.getSettings().shopName || 'ร้านขายของชำ';
   closeModal('modal-settings');

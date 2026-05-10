@@ -15,6 +15,7 @@ const LOCAL_ASSETS = [
   './css/style.css',
   './js/db.js',
   './js/shared.js',
+  './js/sync.js',
   './js/agents.js',
   './js/app.js',
   './js/barcode.js',
@@ -31,6 +32,9 @@ const NO_CACHE_DOMAINS = [
   'world.openfoodfacts.org',
   'api.anthropic.com',
   'cdn.sheetjs.com',
+  'firestore.googleapis.com',
+  'firebase.googleapis.com',
+  'gstatic.com/firebasejs',
 ];
 
 /* ---- Install: pre-cache all app files ---- */
