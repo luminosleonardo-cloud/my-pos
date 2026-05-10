@@ -2085,6 +2085,86 @@ ul { list-style: none; }
 .btn-checkout { position: relative; }
 
 /* ============================================================
+   App Version Badge (sidebar footer)
+   ============================================================ */
+.app-version {
+  display: block;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  opacity: 0.55;
+  margin-top: 2px;
+  letter-spacing: 0.02em;
+}
+
+/* ============================================================
+   Import Excel / CSV
+   ============================================================ */
+.import-dropzone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 30px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  background: var(--bg);
+  user-select: none;
+}
+.import-dropzone:hover { border-color: var(--primary); background: rgba(22,163,74,0.03); }
+.import-drop-icon { font-size: 2.4rem; margin-bottom: 8px; }
+.import-drop-text { font-weight: 600; color: var(--text); font-size: 0.95rem; }
+.import-drop-sub  { font-size: 0.76rem; color: var(--text-muted); margin-top: 4px; }
+
+.import-hint {
+  margin-top: 10px;
+  font-size: 0.79rem;
+  color: var(--text-muted);
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+}
+
+.import-file-info {
+  font-size: 0.87rem;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  background: rgba(22,163,74,0.06);
+  border: 1px solid rgba(22,163,74,0.2);
+  border-radius: var(--radius-sm);
+  line-height: 1.6;
+}
+
+.import-preview-scroll { overflow-x: auto; margin-bottom: 12px; }
+.import-preview-tbl    { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.import-preview-tbl th {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-align: left;
+}
+.import-preview-tbl td {
+  border: 1px solid var(--border);
+  padding: 5px 10px;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.import-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.87rem;
+  cursor: pointer;
+  color: var(--text);
+  margin-top: 4px;
+}
+.import-option input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+
+/* ============================================================
    AI Button
    ============================================================ */
 .btn-ai {

@@ -648,6 +648,135 @@ async function stopInvCamera() {
 function openModal(id)  { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
+/* ---- Import Excel / CSV ---- */
+let _importRows = null;
+
+const IMPORT_COL = {
+  name:              ['ชื่อสินค้า','ชื่อ','สินค้า','name','product','product name','product_name'],
+  barcode:           ['บาร์โค้ด','รหัสบาร์โค้ด','barcode','ean','upc','code','รหัส'],
+  price:             ['ราคาขาย','ราคา','price','selling price','sell price','ราคาจำหน่าย'],
+  quantity:          ['จำนวน','สต็อก','คงเหลือ','quantity','qty','stock','จำนวนสินค้า'],
+  category:          ['หมวดหมู่','หมวด','ประเภท','category','type','cat'],
+  costPrice:         ['ราคาทุน','ต้นทุน','ทุน','cost','cost price','cost_price'],
+  lowStockThreshold: ['สต็อกขั้นต่ำ','ขั้นต่ำ','แจ้งเตือน','min','threshold','low stock','min_stock'],
+};
+
+function openImportModal() {
+  _importRows = null;
+  document.getElementById('import-upload-zone').style.display  = '';
+  document.getElementById('import-preview-area').style.display = 'none';
+  document.getElementById('import-confirm-btn').style.display  = 'none';
+  document.getElementById('import-file-input').value = '';
+  openModal('modal-import');
+}
+
+function handleImportDrop(e) {
+  e.preventDefault();
+  const file = e.dataTransfer.files[0];
+  if (file) _parseImportFile(file);
+}
+
+function handleImportFile(input) {
+  const file = input.files[0];
+  if (file) _parseImportFile(file);
+}
+
+async function _parseImportFile(file) {
+  if (!window.XLSX) { showToast('กำลังโหลด library…', 'warning'); return; }
+
+  try {
+    const buf  = await file.arrayBuffer();
+    const wb   = XLSX.read(buf, { type: 'array' });
+    const ws   = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+    if (!rows.length) { showToast('ไม่พบข้อมูลในไฟล์', 'warning'); return; }
+
+    /* detect columns */
+    const headers = Object.keys(rows[0]);
+    const map = {};
+    for (const [field, aliases] of Object.entries(IMPORT_COL)) {
+      const h = headers.find(h => aliases.some(a => h.toLowerCase().trim() === a.toLowerCase()));
+      if (h) map[field] = h;
+    }
+    if (!map.name) { showToast('ไม่พบคอลัมน์ "ชื่อสินค้า" — ตรวจสอบหัวตาราง', 'error'); return; }
+
+    _importRows = rows.map(r => ({
+      name:              String(r[map.name] || '').trim(),
+      barcode:           String(r[map.barcode] || '').trim(),
+      price:             parseFloat(r[map.price]) || 0,
+      quantity:          parseInt(r[map.quantity]) || 0,
+      category:          String(r[map.category] || 'อื่นๆ').trim() || 'อื่นๆ',
+      costPrice:         parseFloat(r[map.costPrice]) || 0,
+      lowStockThreshold: parseInt(r[map.lowStockThreshold]) || 5,
+    })).filter(r => r.name);
+
+    if (!_importRows.length) { showToast('ไม่พบสินค้าที่มีชื่อ', 'warning'); return; }
+
+    /* show preview */
+    const detected = Object.entries(map).map(([, v]) => v).join(', ');
+    document.getElementById('import-file-info').innerHTML =
+      `<strong>📄 ${file.name}</strong> — พบ <strong>${_importRows.length}</strong> รายการ` +
+      `<br><small style="color:var(--text-muted)">คอลัมน์ที่ตรวจพบ: ${detected}</small>`;
+
+    const preview = _importRows.slice(0, 5);
+    document.getElementById('import-preview-table').innerHTML = `
+      <thead><tr>
+        <th>ชื่อสินค้า</th><th>บาร์โค้ด</th><th>ราคาขาย</th><th>จำนวน</th><th>หมวดหมู่</th>
+      </tr></thead>
+      <tbody>
+        ${preview.map(r => `<tr>
+          <td>${r.name}</td>
+          <td>${r.barcode || '—'}</td>
+          <td>฿${r.price.toFixed(2)}</td>
+          <td>${r.quantity}</td>
+          <td>${r.category}</td>
+        </tr>`).join('')}
+        ${_importRows.length > 5 ? `<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:8px">
+          … และอีก ${_importRows.length - 5} รายการ</td></tr>` : ''}
+      </tbody>`;
+
+    document.getElementById('import-upload-zone').style.display  = 'none';
+    document.getElementById('import-preview-area').style.display = '';
+    document.getElementById('import-confirm-btn').style.display  = '';
+  } catch (err) {
+    showToast(`อ่านไฟล์ไม่ได้: ${err.message}`, 'error');
+  }
+}
+
+function confirmImport() {
+  if (!_importRows?.length) return;
+
+  const updateExisting = document.getElementById('import-update-existing').checked;
+  const products  = DB.getProducts();
+  const barcodeMap = {};
+  products.forEach(p => { if (p.barcode) barcodeMap[p.barcode] = p.id; });
+
+  let added = 0, updated = 0, skipped = 0;
+  _importRows.forEach(row => {
+    const existId = row.barcode ? barcodeMap[row.barcode] : null;
+    if (existId) {
+      if (updateExisting) { DB.updateProduct(existId, row); updated++; }
+      else skipped++;
+    } else {
+      DB.addProduct(row);
+      added++;
+    }
+  });
+
+  closeModal('modal-import');
+  renderTable();
+  renderStats();
+  updateInventoryBadge();
+  _importRows = null;
+
+  const parts = [];
+  if (added)   parts.push(`เพิ่ม ${added} รายการ`);
+  if (updated) parts.push(`อัปเดต ${updated} รายการ`);
+  if (skipped) parts.push(`ข้าม ${skipped} รายการ`);
+  showToast(`นำเข้าสำเร็จ — ${parts.join(', ')}`);
+}
+
 /* ---- AI: Stock Monitor (Agent 1) ---- */
 async function analyzeStockWithAI() {
   const btn   = document.getElementById('btn-stock-analyze');

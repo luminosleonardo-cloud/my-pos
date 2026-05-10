@@ -114,6 +114,9 @@
           <button class="btn btn-primary" onclick="openAdd()">
             + เพิ่มสินค้า
           </button>
+          <button class="btn btn-outline" onclick="openImportModal()" title="นำเข้าสินค้าจาก Excel หรือ CSV">
+            📥 นำเข้า Excel
+          </button>
           <button class="btn btn-ai" id="btn-stock-analyze" onclick="analyzeStockWithAI()" title="วิเคราะห์สต็อกด้วย AI">
             🤖 วิเคราะห์สต็อก
           </button>
@@ -323,9 +326,56 @@
     </div>
   </div>
 
+  <!-- ========== MODAL: Import Excel/CSV ========== -->
+  <div id="modal-import" class="modal-backdrop">
+    <div class="modal modal-wide">
+      <div class="modal-header">
+        <span class="modal-title">📥 นำเข้าสินค้าจาก Excel / CSV</span>
+        <button class="modal-close" onclick="closeModal('modal-import')">✕</button>
+      </div>
+      <div class="modal-body">
+
+        <!-- Upload zone -->
+        <div id="import-upload-zone" class="import-dropzone"
+             onclick="document.getElementById('import-file-input').click()"
+             ondragover="event.preventDefault()" ondrop="handleImportDrop(event)">
+          <div class="import-drop-icon">📊</div>
+          <div class="import-drop-text">คลิกหรือลากไฟล์มาวางที่นี่</div>
+          <div class="import-drop-sub">.xlsx · .xls · .csv</div>
+        </div>
+        <input type="file" id="import-file-input" accept=".xlsx,.xls,.csv"
+               style="display:none" onchange="handleImportFile(this)">
+
+        <div class="import-hint">
+          <strong>คอลัมน์ที่รองรับ:</strong>
+          ชื่อสินค้า · บาร์โค้ด · ราคาขาย · จำนวน · หมวดหมู่ · ราคาทุน · สต็อกขั้นต่ำ
+        </div>
+
+        <!-- Preview (shown after file selected) -->
+        <div id="import-preview-area" style="display:none">
+          <div id="import-file-info" class="import-file-info"></div>
+          <div class="import-preview-scroll">
+            <table id="import-preview-table" class="import-preview-tbl"></table>
+          </div>
+          <label class="import-option">
+            <input type="checkbox" id="import-update-existing" checked>
+            อัปเดตสินค้าที่มีบาร์โค้ดตรงกันอยู่แล้ว
+          </label>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal('modal-import')">ยกเลิก</button>
+        <button class="btn btn-primary" id="import-confirm-btn" style="display:none"
+                onclick="confirmImport()">✅ นำเข้าข้อมูล</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast container -->
   <div id="toast-container"></div>
 
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
   <script src="js/db.js"></script>
   <script src="js/shared.js"></script>
   <script src="js/agents.js"></script>

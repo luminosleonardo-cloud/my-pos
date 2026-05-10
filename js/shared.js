@@ -315,6 +315,8 @@ function _injectSharedModals() {
   });
 }
 
+const APP_VERSION = 'v1.2.0';
+
 /* ---- Init ---- */
 document.addEventListener('DOMContentLoaded', () => {
   _injectSharedModals();
@@ -323,6 +325,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const bn = document.getElementById('brand-name');
   if (bn) bn.textContent = DB.getSettings().shopName || 'ร้านขายของชำ';
+
+  /* Version badge */
+  const footer = document.querySelector('.sidebar-footer');
+  if (footer) {
+    const v = document.createElement('span');
+    v.className   = 'app-version';
+    v.textContent = APP_VERSION;
+    footer.appendChild(v);
+  }
 
   /* Clock — only start if app.js hasn't started its own */
   if (!window._clockStarted) {
