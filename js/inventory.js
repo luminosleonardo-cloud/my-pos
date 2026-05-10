@@ -648,6 +648,45 @@ async function stopInvCamera() {
 function openModal(id)  { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
+/* ---- AI: Stock Monitor (Agent 1) ---- */
+async function analyzeStockWithAI() {
+  const btn   = document.getElementById('btn-stock-analyze');
+  const panel = document.getElementById('ai-stock-panel');
+  const body  = document.getElementById('ai-stock-body');
+
+  if (!Agents.getKey()) {
+    showToast('กรุณาตั้งค่า Claude API Key ในตั้งค่าร้านก่อน', 'warning');
+    if (typeof openSettingsModal === 'function') openSettingsModal();
+    return;
+  }
+
+  btn.disabled    = true;
+  btn.textContent = '⏳ กำลังวิเคราะห์…';
+  panel.style.display = 'block';
+  body.innerHTML  = '<div class="ai-loading">⏳ AI กำลังวิเคราะห์สต็อก…</div>';
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  try {
+    const products = DB.getProducts();
+    const sales    = DB.getSales();
+    const result   = await Agents.analyzeStock(products, sales);
+    body.innerHTML = `<div class="ai-result">${result.replace(/\n/g, '<br>')}</div>`;
+  } catch (err) {
+    if (err.message === 'NO_KEY') {
+      body.innerHTML = '<div class="ai-empty">⚠️ ยังไม่ได้ตั้งค่า Claude API Key — กดที่ <strong>ตั้งค่าร้าน</strong> ในเมนูซ้ายเพื่อใส่ Key</div>';
+    } else {
+      body.innerHTML = `<div class="ai-error">❌ เกิดข้อผิดพลาด: ${err.message}</div>`;
+    }
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = '🤖 วิเคราะห์สต็อก';
+  }
+}
+
+function closeStockAIPanel() {
+  document.getElementById('ai-stock-panel').style.display = 'none';
+}
+
 /* ---- Init ---- */
 document.addEventListener('DOMContentLoaded', () => {
   updateGapiStatus();

@@ -1314,6 +1314,8 @@ ul { list-style: none; }
 
   /* ── Sales page ── */
   .sales-toolbar      { flex-direction: column; align-items: stretch; gap: 8px; margin-bottom: 10px; }
+  .sales-toolbar-actions { flex-wrap: wrap; }
+  .btn-ai.btn-sm { flex: 1; justify-content: center; }
   .sale-card-header   { padding: 10px 12px; gap: 8px; }
   .sale-datetime      { min-width: 60px; padding-right: 8px; }
   .sale-date          { font-size: 0.7rem; }
@@ -2081,3 +2083,97 @@ ul { list-style: none; }
    Keyboard shortcut hint on checkout button
    ============================================================ */
 .btn-checkout { position: relative; }
+
+/* ============================================================
+   AI Button
+   ============================================================ */
+.btn-ai {
+  background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  white-space: nowrap;
+}
+.btn-ai:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+.btn-ai:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+.btn-ai.btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+
+/* ============================================================
+   AI Result Panel
+   ============================================================ */
+.ai-panel {
+  background: var(--card);
+  border: 1.5px solid #a78bfa;
+  border-radius: var(--radius);
+  margin-bottom: 14px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(124,58,237,0.1);
+}
+.ai-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, rgba(124,58,237,0.08), rgba(79,70,229,0.06));
+  border-bottom: 1px solid rgba(124,58,237,0.15);
+}
+.ai-panel-title {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #6d28d9;
+}
+.ai-panel-body { padding: 14px 16px; }
+.ai-result {
+  font-size: 0.88rem;
+  line-height: 1.7;
+  color: var(--text);
+  white-space: pre-wrap;
+}
+.ai-loading {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  padding: 8px 0;
+}
+.ai-empty {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  padding: 8px 0;
+}
+.ai-error {
+  color: var(--danger);
+  font-size: 0.88rem;
+  padding: 8px 0;
+}
+
+/* ============================================================
+   Daily Summary Modal (Agent 5)
+   ============================================================ */
+.daily-summary-pre {
+  font-family: 'Courier New', monospace;
+  font-size: 0.88rem;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  color: var(--text);
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+/* ============================================================
+   Sales toolbar actions group
+   ============================================================ */
+.sales-toolbar-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}

@@ -60,7 +60,7 @@
         <!-- Stats -->
         <div class="stats-grid" id="sales-stats"></div>
 
-        <!-- Period filter tabs + export -->
+        <!-- Period filter tabs + export + AI -->
         <div class="sales-toolbar">
           <div class="sales-period-tabs">
             <button class="tab-btn active" data-period="today"     onclick="setPeriod('today')">วันนี้</button>
@@ -69,13 +69,47 @@
             <button class="tab-btn"        data-period="30days"    onclick="setPeriod('30days')">30 วันล่าสุด</button>
             <button class="tab-btn"        data-period="all"       onclick="setPeriod('all')">ทั้งหมด</button>
           </div>
-          <button class="btn btn-outline btn-sm" onclick="exportCSV()" title="ส่งออกข้อมูลช่วงที่เลือกเป็น CSV">
-            📥 Export CSV
-          </button>
+          <div class="sales-toolbar-actions">
+            <button class="btn btn-outline btn-sm" onclick="exportCSV()" title="ส่งออกข้อมูลช่วงที่เลือกเป็น CSV">
+              📥 Export
+            </button>
+            <button class="btn btn-ai btn-sm" id="btn-analyze" onclick="analyzeWithAI()" title="วิเคราะห์ยอดขายด้วย AI">
+              🤖 วิเคราะห์ AI
+            </button>
+            <button class="btn btn-ai btn-sm" onclick="summarizeToday()" title="สร้างสรุปยอดขายวันนี้สำหรับส่ง LINE">
+              📋 สรุปวันนี้
+            </button>
+          </div>
+        </div>
+
+        <!-- AI Result Panel -->
+        <div id="ai-panel" class="ai-panel" style="display:none">
+          <div class="ai-panel-header">
+            <span class="ai-panel-title" id="ai-panel-title">🤖 วิเคราะห์โดย AI</span>
+            <button class="modal-close" onclick="closeAIPanel()">✕</button>
+          </div>
+          <div class="ai-panel-body" id="ai-panel-body"></div>
         </div>
 
         <!-- Sales list -->
         <div id="sales-list"></div>
+
+        <!-- Modal: Daily Summary -->
+        <div id="modal-daily-summary" class="modal-backdrop">
+          <div class="modal">
+            <div class="modal-header">
+              <span class="modal-title">📋 สรุปยอดขายวันนี้</span>
+              <button class="modal-close" onclick="closeModal('modal-daily-summary')">✕</button>
+            </div>
+            <div class="modal-body">
+              <pre id="daily-summary-text" class="daily-summary-pre">⏳ กำลังสร้างสรุป…</pre>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-ghost" onclick="closeModal('modal-daily-summary')">ปิด</button>
+              <button class="btn btn-primary" onclick="copySummary()">📋 คัดลอก</button>
+            </div>
+          </div>
+        </div>
 
       </div>
 
@@ -88,6 +122,7 @@
 
   <script src="js/db.js"></script>
   <script src="js/shared.js"></script>
+  <script src="js/agents.js"></script>
   <script src="js/sales.js"></script>
   <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');</script>
 </body>

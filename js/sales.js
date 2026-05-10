@@ -256,8 +256,89 @@ function deleteSale(id) {
   renderSalesList();
 }
 
+/* ---- AI: Analyze sales (Agent 3) ---- */
+async function analyzeWithAI() {
+  const btn   = document.getElementById('btn-analyze');
+  const panel = document.getElementById('ai-panel');
+  const body  = document.getElementById('ai-panel-body');
+  const title = document.getElementById('ai-panel-title');
+
+  if (!Agents.getKey()) {
+    showToast('กรุณาตั้งค่า Claude API Key ในตั้งค่าร้านก่อน', 'warning');
+    if (typeof openSettingsModal === 'function') openSettingsModal();
+    return;
+  }
+
+  btn.disabled    = true;
+  btn.textContent = '⏳ กำลังวิเคราะห์…';
+  panel.style.display = 'block';
+  body.innerHTML  = '<div class="ai-loading">⏳ AI กำลังวิเคราะห์ข้อมูล…</div>';
+  title.textContent = '🤖 วิเคราะห์โดย AI';
+
+  try {
+    const sales    = getFilteredSales();
+    const products = DB.getProducts();
+    const result   = await Agents.analyzeSales(currentPeriod, sales, products);
+    const tabLabel = document.querySelector('.tab-btn.active')?.textContent?.trim() || '';
+    title.textContent = `🤖 วิเคราะห์ยอดขาย — ${tabLabel}`;
+    body.innerHTML = `<div class="ai-result">${result.replace(/\n/g, '<br>')}</div>`;
+  } catch (err) {
+    if (err.message === 'NO_DATA') {
+      body.innerHTML = '<div class="ai-empty">ไม่มีข้อมูลยอดขายในช่วงที่เลือก</div>';
+    } else if (err.message === 'NO_KEY') {
+      body.innerHTML = '<div class="ai-empty">⚠️ ยังไม่ได้ตั้งค่า Claude API Key — กดที่ <strong>ตั้งค่าร้าน</strong> ในเมนูซ้ายเพื่อใส่ Key</div>';
+    } else {
+      body.innerHTML = `<div class="ai-error">❌ เกิดข้อผิดพลาด: ${err.message}</div>`;
+    }
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = '🤖 วิเคราะห์ AI';
+  }
+}
+
+function closeAIPanel() {
+  document.getElementById('ai-panel').style.display = 'none';
+}
+
+/* ---- AI: Daily summary (Agent 5) ---- */
+async function summarizeToday() {
+  if (!Agents.getKey()) {
+    showToast('กรุณาตั้งค่า Claude API Key ในตั้งค่าร้านก่อน', 'warning');
+    if (typeof openSettingsModal === 'function') openSettingsModal();
+    return;
+  }
+
+  const todaySales = DB.getTodaySales();
+  if (!todaySales.length) {
+    showToast('ยังไม่มียอดขายวันนี้', 'warning');
+    return;
+  }
+
+  const textEl = document.getElementById('daily-summary-text');
+  textEl.textContent = '⏳ กำลังสร้างสรุป…';
+  openModal('modal-daily-summary');
+
+  try {
+    const settings = DB.getSettings();
+    textEl.textContent = await Agents.summarizeDay(todaySales, settings);
+  } catch (err) {
+    textEl.textContent = `❌ เกิดข้อผิดพลาด: ${err.message}`;
+  }
+}
+
+function copySummary() {
+  const text = document.getElementById('daily-summary-text').textContent;
+  navigator.clipboard.writeText(text)
+    .then(() => showToast('คัดลอกแล้ว ✓'))
+    .catch(() => showToast('คัดลอกไม่ได้ — ลองเลือกข้อความแล้วกด Ctrl+C', 'warning'));
+}
+
 /* ---- Init ---- */
 document.addEventListener('DOMContentLoaded', () => {
   renderStats();
   renderSalesList();
+  /* wire backdrop-click on daily-summary modal */
+  document.addEventListener('click', e => {
+    if (e.target.id === 'modal-daily-summary') closeModal('modal-daily-summary');
+  });
 });

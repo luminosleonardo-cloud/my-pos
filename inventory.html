@@ -114,6 +114,18 @@
           <button class="btn btn-primary" onclick="openAdd()">
             + เพิ่มสินค้า
           </button>
+          <button class="btn btn-ai" id="btn-stock-analyze" onclick="analyzeStockWithAI()" title="วิเคราะห์สต็อกด้วย AI">
+            🤖 วิเคราะห์สต็อก
+          </button>
+        </div>
+
+        <!-- AI Stock Result Panel -->
+        <div id="ai-stock-panel" class="ai-panel" style="display:none">
+          <div class="ai-panel-header">
+            <span class="ai-panel-title">🤖 วิเคราะห์สต็อก</span>
+            <button class="modal-close" onclick="closeStockAIPanel()">✕</button>
+          </div>
+          <div class="ai-panel-body" id="ai-stock-body"></div>
         </div>
 
         <!-- Table -->
@@ -316,6 +328,7 @@
 
   <script src="js/db.js"></script>
   <script src="js/shared.js"></script>
+  <script src="js/agents.js"></script>
   <script src="js/barcode.js"></script>
   <script src="js/inventory.js"></script>
   <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');</script>

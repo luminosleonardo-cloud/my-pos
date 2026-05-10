@@ -479,6 +479,8 @@ function openSettingsModal() {
   document.getElementById('set-taxid').value     = s.taxId     || '';
   document.getElementById('set-promptpay').value = s.promptpay || '';
   document.getElementById('set-footer').value    = s.footer    || '';
+  const geminiEl = document.getElementById('set-gemini-key');
+  if (geminiEl) geminiEl.value = localStorage.getItem('gemini_api_key') || '';
   openModal('modal-settings');
 }
 
@@ -491,6 +493,8 @@ function saveSettingsForm() {
     promptpay: document.getElementById('set-promptpay').value.trim(),
     footer:    document.getElementById('set-footer').value.trim(),
   });
+  const geminiEl = document.getElementById('set-gemini-key');
+  if (geminiEl) localStorage.setItem('gemini_api_key', geminiEl.value.trim());
   const bn = document.getElementById('brand-name');
   if (bn) bn.textContent = DB.getSettings().shopName || 'ร้านขายของชำ';
   closeModal('modal-settings');

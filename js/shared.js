@@ -58,6 +58,8 @@ function openSettingsModal() {
   document.getElementById('set-taxid').value     = s.taxId     || '';
   document.getElementById('set-promptpay').value = s.promptpay || '';
   document.getElementById('set-footer').value    = s.footer    || '';
+  const geminiEl = document.getElementById('set-gemini-key');
+  if (geminiEl) geminiEl.value = localStorage.getItem('gemini_api_key') || '';
   openModal('modal-settings');
 }
 
@@ -70,6 +72,8 @@ function saveSettingsForm() {
     promptpay: document.getElementById('set-promptpay').value.trim(),
     footer:    document.getElementById('set-footer').value.trim(),
   });
+  const geminiEl = document.getElementById('set-gemini-key');
+  if (geminiEl) localStorage.setItem('gemini_api_key', geminiEl.value.trim());
   const bn = document.getElementById('brand-name');
   if (bn) bn.textContent = DB.getSettings().shopName || 'ร้านขายของชำ';
   closeModal('modal-settings');
@@ -210,6 +214,12 @@ function _injectSharedModals() {
         <div class="form-group">
           <label class="form-label">ข้อความท้ายใบเสร็จ</label>
           <input id="set-footer" class="form-input" type="text" placeholder="ขอบคุณที่ใช้บริการ">
+        </div>
+        <hr style="margin:16px 0;border-color:var(--border)">
+        <div class="form-group">
+          <label class="form-label">🤖 Gemini API Key <span style="font-weight:400;color:var(--text-muted)">(สำหรับ AI วิเคราะห์ยอดขาย / สต็อก / บาร์โค้ด)</span></label>
+          <input id="set-gemini-key" class="form-input" type="password" placeholder="AIza…" autocomplete="off">
+          <p style="font-size:0.78rem;color:var(--text-muted);margin-top:4px">รับ Key ฟรีได้ที่ <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--primary)">aistudio.google.com</a> — เก็บในเครื่องของคุณเท่านั้น</p>
         </div>
       </div>
       <div class="modal-footer">
