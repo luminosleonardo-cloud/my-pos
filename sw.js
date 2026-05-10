@@ -1,9 +1,10 @@
 /* ============================================================
    sw.js — Service Worker (PWA offline support)
-   Bump CACHE_NAME version whenever you deploy new files.
+   Strategy: stale-while-revalidate — serve cache instantly,
+   update cache in background → next load gets fresh files.
    ============================================================ */
 
-const CACHE_NAME = 'pos-v1';
+const CACHE_NAME = 'pos-v1.2';
 
 const LOCAL_ASSETS = [
   './',
@@ -14,7 +15,9 @@ const LOCAL_ASSETS = [
   './css/style.css',
   './js/db.js',
   './js/shared.js',
+  './js/agents.js',
   './js/app.js',
+  './js/barcode.js',
   './js/inventory.js',
   './js/sales.js',
   './js/promptpay.js',
@@ -26,6 +29,8 @@ const LOCAL_ASSETS = [
 const NO_CACHE_DOMAINS = [
   'generativelanguage.googleapis.com',
   'world.openfoodfacts.org',
+  'api.anthropic.com',
+  'cdn.sheetjs.com',
 ];
 
 /* ---- Install: pre-cache all app files ---- */
@@ -37,7 +42,7 @@ self.addEventListener('install', e => {
   );
 });
 
-/* ---- Activate: delete old caches ---- */
+/* ---- Activate: delete old caches, claim clients ---- */
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
@@ -48,32 +53,26 @@ self.addEventListener('activate', e => {
   );
 });
 
-/* ---- Fetch: cache-first for local, network-only for APIs ---- */
+/* ---- Fetch: stale-while-revalidate ---- */
 self.addEventListener('fetch', e => {
   const url = e.request.url;
 
-  /* Pass API calls straight through */
+  /* Pass API/CDN calls straight through */
   if (NO_CACHE_DOMAINS.some(d => url.includes(d))) return;
+  if (e.request.method !== 'GET') return;
 
-  /* Cache CDN scripts on first load, serve from cache after */
   e.respondWith(
-    caches.match(e.request).then(cached => {
-      if (cached) return cached;
-
-      return fetch(e.request)
-        .then(res => {
-          if (res.ok && e.request.method === 'GET') {
-            const clone = res.clone();
-            caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
-          }
+    caches.open(CACHE_NAME).then(cache =>
+      cache.match(e.request).then(cached => {
+        /* Always fetch from network in background and update cache */
+        const networkFetch = fetch(e.request).then(res => {
+          if (res.ok) cache.put(e.request, res.clone());
           return res;
-        })
-        .catch(() => {
-          /* Offline fallback: any navigation → index.html */
-          if (e.request.mode === 'navigate') {
-            return caches.match('./index.html');
-          }
-        });
-    })
+        }).catch(() => null);
+
+        /* Return cached instantly if available, else wait for network */
+        return cached || networkFetch.then(res => res || cache.match('./index.html'));
+      })
+    )
   );
 });
