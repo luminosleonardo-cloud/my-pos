@@ -398,9 +398,12 @@
           <p style="font-size:0.78rem;color:var(--text-muted);margin-top:4px">รับ Key ฟรีได้ที่ <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--primary)">aistudio.google.com</a> — เก็บในเครื่องของคุณเท่านั้น</p>
         </div>
       </div>
-      <div class="modal-footer">
-        <button class="btn btn-ghost" onclick="closeModal('modal-settings')">ยกเลิก</button>
-        <button class="btn btn-primary" onclick="saveSettingsForm()">💾 บันทึก</button>
+      <div class="modal-footer" style="justify-content:space-between;align-items:center">
+        <span id="settings-version" style="font-size:0.72rem;color:var(--text-muted);opacity:0.6"></span>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost" onclick="closeModal('modal-settings')">ยกเลิก</button>
+          <button class="btn btn-primary" onclick="saveSettingsForm()">💾 บันทึก</button>
+        </div>
       </div>
     </div>
   </div>

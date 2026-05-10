@@ -481,6 +481,8 @@ function openSettingsModal() {
   document.getElementById('set-footer').value    = s.footer    || '';
   const geminiEl = document.getElementById('set-gemini-key');
   if (geminiEl) geminiEl.value = localStorage.getItem('gemini_api_key') || '';
+  const verEl = document.getElementById('settings-version');
+  if (verEl && typeof APP_VERSION !== 'undefined') verEl.textContent = APP_VERSION;
   openModal('modal-settings');
 }
 
