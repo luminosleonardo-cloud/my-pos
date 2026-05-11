@@ -175,7 +175,6 @@ function addToCart(productId) {
   }
   saveCart();
   renderCart();
-  showToast(`เพิ่ม ${product.name}`, 'success');
 }
 
 function changeQty(productId, delta) {
@@ -234,12 +233,14 @@ function renderCartFooter() {
   if (mbar) {
     const qty = cart.reduce((s, i) => s + i.qty, 0);
     if (qty > 0) {
+      mbar.style.display = '';
       mbar.classList.remove('hidden');
       const mcbCount = document.getElementById('mcb-count');
       const mcbTotal = document.getElementById('mcb-total');
       if (mcbCount) mcbCount.textContent = qty;
       if (mcbTotal) mcbTotal.textContent = `฿${fmt(total)}`;
     } else {
+      mbar.style.display = 'none';
       mbar.classList.add('hidden');
     }
   }
@@ -263,6 +264,14 @@ function renderCart() {
   const totalQty  = cart.reduce((s, i) => s + i.qty, 0);
   countEl.textContent = totalQty;
   renderCartFooter();
+
+  if (cart.length === 0) {
+    /* auto-close sheet and clear bar the moment cart empties */
+    closeCartSheet();
+    clearSavedCart();
+  } else if (document.getElementById('cart-sheet')?.classList.contains('open')) {
+    renderCartSheet();
+  }
 
   if (cart.length === 0) {
     itemsEl.innerHTML = `
@@ -292,6 +301,66 @@ function renderCart() {
       </div>
       <span class="cart-item-total">฿${fmt(p.price * qty)}</span>
     </div>`).join('');
+}
+
+/* ---- Cart bottom sheet (mobile) ---- */
+function openCartSheet() {
+  renderCartSheet();
+  document.getElementById('cart-sheet').classList.add('open');
+  document.getElementById('cart-sheet-backdrop').classList.add('open');
+}
+
+function closeCartSheet() {
+  document.getElementById('cart-sheet').classList.remove('open');
+  document.getElementById('cart-sheet-backdrop').classList.remove('open');
+}
+
+function renderCartSheet() {
+  const bodyEl = document.getElementById('sheet-cart-items');
+  if (!bodyEl) return;
+
+  document.getElementById('sheet-item-count').textContent = cart.length;
+
+  if (cart.length === 0) {
+    bodyEl.innerHTML = `<div class="cart-empty"><div class="empty-icon">🛒</div><p>ยังไม่มีสินค้าในตะกร้า</p></div>`;
+  } else {
+    bodyEl.innerHTML = cart.map(({ product: p, qty }) => `
+      <div class="cart-item">
+        ${p.image
+          ? `<img src="${p.image}" alt="${p.name}" class="cart-item-img"
+                 onerror="this.outerHTML='<span class=\\'cart-item-emoji\\'>${DB.getEmoji(p.category)}</span>'">`
+          : `<span class="cart-item-emoji">${DB.getEmoji(p.category)}</span>`
+        }
+        <div class="cart-item-info">
+          <div class="cart-item-name">${p.name}</div>
+          <div class="cart-item-unit">฿${fmt(p.price)} / ชิ้น</div>
+        </div>
+        <div class="qty-controls">
+          <button class="qty-btn minus" onclick="changeQty('${p.id}',-1)">−</button>
+          <span class="qty-num">${qty}</span>
+          <button class="qty-btn plus"  onclick="changeQty('${p.id}', 1)">+</button>
+        </div>
+        <span class="cart-item-total">฿${fmt(p.price * qty)}</span>
+      </div>`).join('');
+  }
+
+  /* footer totals */
+  const sub   = getSubtotal();
+  const disc  = getDiscountAmt();
+  const total = getTotal();
+  document.getElementById('sheet-total').textContent = `฿${fmt(total)}`;
+  const rowSub  = document.getElementById('sheet-row-sub');
+  const rowDisc = document.getElementById('sheet-row-disc');
+  if (disc > 0) {
+    document.getElementById('sheet-subtotal').textContent  = `฿${fmt(sub)}`;
+    document.getElementById('sheet-disc-amt').textContent  = `-฿${fmt(disc)}`;
+    document.getElementById('sheet-disc-label').textContent = getDiscountLabel();
+    rowSub.style.display  = '';
+    rowDisc.style.display = '';
+  } else {
+    rowSub.style.display  = 'none';
+    rowDisc.style.display = 'none';
+  }
 }
 
 /* ---- Payment Modal ---- */

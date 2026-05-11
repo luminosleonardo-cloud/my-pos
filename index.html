@@ -152,13 +152,40 @@
       </div>
 
       <!-- Mobile cart bar — visible only on small screens, hidden when cart is empty -->
-      <div class="mobile-cart-bar hidden" id="mobile-cart-bar">
-        <div class="mcb-left">
+      <div class="mobile-cart-bar hidden" id="mobile-cart-bar" style="display:none">
+        <div class="mcb-left" onclick="openCartSheet()" role="button" style="cursor:pointer;padding:4px 0">
           <span class="mcb-count" id="mcb-count">0</span>
-          <span class="mcb-label">รายการ</span>
+          <span class="mcb-label">รายการ ›</span>
         </div>
         <span class="mcb-total" id="mcb-total">฿0.00</span>
         <button class="mcb-btn" onclick="openPayment()">ชำระเงิน ›</button>
+      </div>
+
+      <!-- Cart bottom sheet (mobile) -->
+      <div class="cart-sheet-backdrop" id="cart-sheet-backdrop" onclick="closeCartSheet()"></div>
+      <div class="cart-sheet" id="cart-sheet">
+        <div class="cart-sheet-handle"></div>
+        <div class="cart-sheet-header">
+          <span>🛒 รายการสินค้า&nbsp;(<span id="sheet-item-count">0</span>&nbsp;รายการ)</span>
+          <button class="modal-close" onclick="closeCartSheet()">✕</button>
+        </div>
+        <div class="cart-sheet-body" id="sheet-cart-items"></div>
+        <div class="cart-sheet-footer">
+          <div class="sheet-footer-row" id="sheet-row-sub" style="display:none">
+            <span style="opacity:.7">ราคารวม</span>
+            <span id="sheet-subtotal"></span>
+          </div>
+          <div class="sheet-footer-row" id="sheet-row-disc" style="display:none">
+            <span style="opacity:.7;color:var(--danger)" id="sheet-disc-label">ส่วนลด</span>
+            <span style="color:var(--danger)" id="sheet-disc-amt"></span>
+          </div>
+          <div class="sheet-footer-row sheet-footer-total">
+            <span>ยอดสุทธิ</span>
+            <span id="sheet-total">฿0.00</span>
+          </div>
+          <button class="btn btn-primary" style="width:100%;margin-top:10px;font-size:1rem;padding:13px"
+                  onclick="closeCartSheet(); openPayment()">ชำระเงิน ›</button>
+        </div>
       </div>
 
     </main>
