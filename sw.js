@@ -4,13 +4,14 @@
    update cache in background → next load gets fresh files.
    ============================================================ */
 
-const CACHE_NAME = 'pos-v1.2';
+const CACHE_NAME = 'pos-v1.6';
 
 const LOCAL_ASSETS = [
   './',
   './index.html',
   './inventory.html',
   './sales.html',
+  './settings.html',
   './manifest.json',
   './css/style.css',
   './js/db.js',
@@ -23,7 +24,15 @@ const LOCAL_ASSETS = [
   './js/sales.js',
   './js/promptpay.js',
   './js/printer.js',
+  './js/settings.js',
+  './reports.html',
+  './js/reports.js',
   './icons/icon.svg',
+];
+
+/* External CDN libraries — cached normally via stale-while-revalidate */
+const CACHE_CDNS = [
+  'cdn.jsdelivr.net/npm/chart.js',
 ];
 
 /* External APIs — never cache */
@@ -61,8 +70,9 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = e.request.url;
 
-  /* Pass API/CDN calls straight through */
-  if (NO_CACHE_DOMAINS.some(d => url.includes(d))) return;
+  /* Pass API calls straight through, but still cache allowed CDNs */
+  if (NO_CACHE_DOMAINS.some(d => url.includes(d)) &&
+      !CACHE_CDNS.some(d => url.includes(d))) return;
   if (e.request.method !== 'GET') return;
 
   e.respondWith(

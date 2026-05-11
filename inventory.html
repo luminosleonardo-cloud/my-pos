@@ -39,7 +39,11 @@
           <span class="sl-icon">📊</span>
           <span class="sl-label">ประวัติการขาย</span>
         </a>
-        <a href="#" class="sidebar-link" onclick="openSettingsModal();return false">
+        <a href="reports.html" class="sidebar-link">
+          <span class="sl-icon">💹</span>
+          <span class="sl-label">รายงานกำไร</span>
+        </a>
+        <a href="settings.html" class="sidebar-link">
           <span class="sl-icon">🏪</span>
           <span class="sl-label">ตั้งค่าร้าน</span>
         </a>
@@ -194,6 +198,10 @@
                         onclick="document.getElementById('img-file').click()">
                   📁 อัปโหลดรูป
                 </button>
+                <button type="button" class="btn btn-outline btn-sm"
+                        onclick="openPhotoCamera()">
+                  📷 ถ่ายรูป
+                </button>
                 <button type="button" class="btn btn-secondary btn-sm"
                         onclick="triggerImageSearch()">
                   🔍 ค้นหารูปภาพ
@@ -278,11 +286,39 @@
             </div>
           </div>
 
+          <div class="form-group">
+            <label class="form-label">จำนวนต่อแพ็ค (ใช้สำหรับรับสต็อก)</label>
+            <div class="input-group">
+              <input id="f-pack-size" class="form-input" type="number"
+                     min="1" step="1" placeholder="12" value="12">
+              <span class="input-addon input-addon-right">ชิ้น / แพ็ค</span>
+            </div>
+          </div>
+
         </form>
       </div>
       <div class="modal-footer">
         <button class="btn btn-ghost" onclick="closeModal('modal-product')">ยกเลิก</button>
         <button class="btn btn-primary" onclick="saveProduct()">บันทึก</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL: Photo Camera ========== -->
+  <div id="modal-photo-cam" class="modal-backdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">📷 ถ่ายรูปสินค้า</span>
+        <button class="modal-close" onclick="closePhotoCamera()">✕</button>
+      </div>
+      <div class="modal-body" style="text-align:center">
+        <video id="photo-video" autoplay playsinline
+               style="width:100%;max-width:360px;border-radius:8px;background:#000"></video>
+        <canvas id="photo-canvas" style="display:none"></canvas>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="capturePhoto()">📸 ถ่ายรูป</button>
+        <button class="btn btn-ghost" onclick="closePhotoCamera()">ยกเลิก</button>
       </div>
     </div>
   </div>
@@ -323,6 +359,58 @@
       <div class="modal-footer">
         <button class="btn btn-ghost" onclick="closeModal('modal-delete')">ยกเลิก</button>
         <button class="btn btn-danger" onclick="confirmDelete()">ลบสินค้า</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL: Adjust Stock ========== -->
+  <div id="modal-adjust" class="modal-backdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">📋 ปรับยอดสต็อก</span>
+        <button class="modal-close" onclick="closeModal('modal-adjust')">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-weight:600;font-size:1rem;margin-bottom:4px" id="adj-product-name"></p>
+        <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:16px">
+          ยอดในระบบปัจจุบัน: <strong id="adj-current-qty"></strong> ชิ้น
+        </p>
+        <div class="form-group">
+          <label class="form-label">ยอดจริงที่นับได้ (ชิ้น)</label>
+          <div class="input-group">
+            <input id="adj-new-qty" class="form-input" type="number" min="0" step="1"
+                   placeholder="0" oninput="onAdjQtyInput()">
+            <span class="input-addon input-addon-right" id="adj-diff-label"
+                  style="min-width:60px;font-weight:700;font-size:0.9rem"></span>
+          </div>
+        </div>
+        <div class="adj-pack-btns">
+          <span class="adj-pack-label">รับสต็อกด่วน:</span>
+          <button type="button" class="btn btn-outline btn-sm" onclick="adjAddPack(0.5)">
+            +ครึ่งแพ็ค <span id="adj-half-pack-label"></span>
+          </button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="adjAddPack(1)">
+            +1 แพ็ค <span id="adj-full-pack-label"></span>
+          </button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="adjAddPack(2)">
+            +2 แพ็ค <span id="adj-double-pack-label"></span>
+          </button>
+        </div>
+        <div class="form-group">
+          <label class="form-label">เหตุผล</label>
+          <select id="adj-reason" class="form-input form-select">
+            <option value="นับสต็อก">นับสต็อก</option>
+            <option value="สินค้าเสีย/หมดอายุ">สินค้าเสีย / หมดอายุ</option>
+            <option value="สินค้าสูญหาย">สินค้าสูญหาย</option>
+            <option value="รับสินค้าเพิ่ม">รับสินค้าเพิ่ม</option>
+            <option value="แก้ไขข้อมูลผิดพลาด">แก้ไขข้อมูลผิดพลาด</option>
+            <option value="อื่นๆ">อื่นๆ</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal('modal-adjust')">ยกเลิก</button>
+        <button class="btn btn-primary" onclick="confirmAdjust()">✅ บันทึก</button>
       </div>
     </div>
   </div>

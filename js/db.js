@@ -2,11 +2,12 @@
    db.js — localStorage data layer
    ============================================================ */
 const DB = (() => {
-  const PRODUCTS_KEY  = 'grocery_products';
-  const SALES_KEY     = 'grocery_sales';
-  const SETTINGS_KEY  = 'grocery_settings';
-  const SHIFTS_KEY    = 'grocery_shifts';
-  const RECEIPT_KEY   = 'grocery_receipt_no';
+  const PRODUCTS_KEY     = 'grocery_products';
+  const SALES_KEY        = 'grocery_sales';
+  const SETTINGS_KEY     = 'grocery_settings';
+  const SHIFTS_KEY       = 'grocery_shifts';
+  const RECEIPT_KEY      = 'grocery_receipt_no';
+  const ADJUSTMENTS_KEY  = 'grocery_adjustments';
 
   const CATEGORY_EMOJI = {
     'เครื่องปรุง': '🧂',
@@ -116,6 +117,34 @@ const DB = (() => {
     products[idx].quantity = Math.max(0, products[idx].quantity - qty);
     products[idx].updatedAt = new Date().toISOString();
     saveProducts(products);
+  }
+
+  function adjustStock(id, newQty, reason) {
+    const products = getProducts();
+    const idx = products.findIndex(p => p.id === id);
+    if (idx === -1) return null;
+    const oldQty = products[idx].quantity;
+    products[idx].quantity = Math.max(0, parseInt(newQty) || 0);
+    products[idx].updatedAt = new Date().toISOString();
+    saveProducts(products);
+    const adjs = getAdjustments();
+    adjs.push({
+      id: generateId(),
+      productId: id,
+      productName: products[idx].name,
+      oldQty,
+      newQty: products[idx].quantity,
+      diff: products[idx].quantity - oldQty,
+      reason: reason || 'ปรับยอดสต็อก',
+      createdAt: new Date().toISOString(),
+    });
+    localStorage.setItem(ADJUSTMENTS_KEY, JSON.stringify(adjs));
+    return products[idx];
+  }
+
+  function getAdjustments() {
+    try { return JSON.parse(localStorage.getItem(ADJUSTMENTS_KEY) || '[]'); }
+    catch { return []; }
   }
 
   function getStockStatus(product) {
@@ -273,5 +302,6 @@ const DB = (() => {
     getSales, addSale, deleteSale, getTodaySales, getStats, getNextReceiptNo,
     getSettings, saveSettings,
     getShifts, getActiveShift, openShift, closeShift,
+    adjustStock, getAdjustments,
   };
 })();

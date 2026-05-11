@@ -185,6 +185,7 @@ function renderSalesList() {
             ${sale.note ? `<div class="sale-detail-row"><span>หมายเหตุ</span><span style="color:var(--text-muted)">${sale.note}</span></div>` : ''}
           </div>
           <div class="sale-detail-actions">
+            <button class="btn btn-sm btn-outline" onclick="reprintReceipt('${sale.id}')">🖨️ พิมพ์ซ้ำ</button>
             <button class="btn btn-sm btn-outline-danger" onclick="deleteSale('${sale.id}')">🗑️ ลบรายการนี้</button>
           </div>
         </div>
@@ -256,6 +257,43 @@ function deleteSale(id) {
   renderSalesList();
 }
 
+/* ---- Reprint receipt ---- */
+function reprintReceipt(saleId) {
+  const sale = DB.getSales().find(s => s.id === saleId);
+  if (!sale) return;
+  const saleItems = sale.items.map(i => ({ product: { name: i.name, price: i.price, category: '' }, qty: i.qty }));
+  const meta = {
+    subtotal:      sale.subtotal ?? sale.total,
+    discountAmt:   sale.discountAmt  || 0,
+    discountLabel: sale.discountLabel || '',
+    note:          sale.note || '',
+    receiptNo:     sale.receiptNo,
+    payMethod:     sale.payMethod || 'cash',
+  };
+  document.getElementById('reprint-content').innerHTML =
+    buildReceiptHTML(saleItems, sale.total, sale.cash || sale.total, sale.change || 0,
+      meta, { showSuccess: false, createdAt: sale.createdAt });
+  openModal('modal-reprint');
+}
+
+function thermalReprintSale(saleId) {
+  const sale = DB.getSales().find(s => s.id === saleId);
+  if (!sale || typeof Printer === 'undefined' || !Printer.connected()) {
+    showToast('ไม่ได้เชื่อมต่อเครื่องพิมพ์', 'warning');
+    return;
+  }
+  const saleItems = sale.items.map(i => ({ product: { name: i.name, price: i.price, category: '' }, qty: i.qty }));
+  const meta = {
+    subtotal: sale.subtotal ?? sale.total,
+    discountAmt: sale.discountAmt || 0,
+    discountLabel: sale.discountLabel || '',
+    note: sale.note || '',
+    receiptNo: sale.receiptNo,
+  };
+  Printer.printReceipt(saleItems, sale.total, sale.cash || sale.total, sale.change || 0, meta)
+    .catch(err => showToast('พิมพ์ไม่สำเร็จ: ' + err.message, 'error'));
+}
+
 /* ---- AI: Analyze sales (Agent 3) ---- */
 async function analyzeWithAI() {
   const btn   = document.getElementById('btn-analyze');
@@ -264,8 +302,8 @@ async function analyzeWithAI() {
   const title = document.getElementById('ai-panel-title');
 
   if (!Agents.getKey()) {
-    showToast('กรุณาตั้งค่า Claude API Key ในตั้งค่าร้านก่อน', 'warning');
-    if (typeof openSettingsModal === 'function') openSettingsModal();
+    showToast('กรุณาตั้งค่า Gemini API Key ในตั้งค่าร้านก่อน', 'warning');
+    window.location.href = 'settings.html';
     return;
   }
 
@@ -286,7 +324,7 @@ async function analyzeWithAI() {
     if (err.message === 'NO_DATA') {
       body.innerHTML = '<div class="ai-empty">ไม่มีข้อมูลยอดขายในช่วงที่เลือก</div>';
     } else if (err.message === 'NO_KEY') {
-      body.innerHTML = '<div class="ai-empty">⚠️ ยังไม่ได้ตั้งค่า Claude API Key — กดที่ <strong>ตั้งค่าร้าน</strong> ในเมนูซ้ายเพื่อใส่ Key</div>';
+      body.innerHTML = '<div class="ai-empty">⚠️ ยังไม่ได้ตั้งค่า Gemini API Key — กดที่ <strong>ตั้งค่าร้าน</strong> ในเมนูซ้ายเพื่อใส่ Key</div>';
     } else {
       body.innerHTML = `<div class="ai-error">❌ เกิดข้อผิดพลาด: ${err.message}</div>`;
     }
@@ -303,8 +341,8 @@ function closeAIPanel() {
 /* ---- AI: Daily summary (Agent 5) ---- */
 async function summarizeToday() {
   if (!Agents.getKey()) {
-    showToast('กรุณาตั้งค่า Claude API Key ในตั้งค่าร้านก่อน', 'warning');
-    if (typeof openSettingsModal === 'function') openSettingsModal();
+    showToast('กรุณาตั้งค่า Gemini API Key ในตั้งค่าร้านก่อน', 'warning');
+    window.location.href = 'settings.html';
     return;
   }
 
@@ -333,12 +371,16 @@ function copySummary() {
     .catch(() => showToast('คัดลอกไม่ได้ — ลองเลือกข้อความแล้วกด Ctrl+C', 'warning'));
 }
 
+/* ---- Modal helpers ---- */
+function openModal(id)  { document.getElementById(id)?.classList.add('open'); }
+function closeModal(id) { document.getElementById(id)?.classList.remove('open'); }
+
 /* ---- Init ---- */
 document.addEventListener('DOMContentLoaded', () => {
   renderStats();
   renderSalesList();
-  /* wire backdrop-click on daily-summary modal */
   document.addEventListener('click', e => {
     if (e.target.id === 'modal-daily-summary') closeModal('modal-daily-summary');
+    if (e.target.id === 'modal-reprint')       closeModal('modal-reprint');
   });
 });

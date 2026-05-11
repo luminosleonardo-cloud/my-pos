@@ -9,7 +9,7 @@ const BarcodeScanner = (() => {
   let lastTime  = 0;
   let scanCb    = null;
   const GAP_MS  = 60;   // max ms between chars for a scanner keystroke
-  const MIN_LEN = 3;    // min barcode length
+  const MIN_LEN = 6;    // min barcode length
 
   document.addEventListener('keydown', e => {
     const now = Date.now();

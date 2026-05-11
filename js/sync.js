@@ -34,6 +34,10 @@ const Sync = (() => {
 
   /* ---- Init ---- */
   async function init() {
+    /* Only sync on deployed URL — never on localhost / file:// */
+    const host = window.location.hostname;
+    if (!host || host === 'localhost' || host === '127.0.0.1') return;
+
     const config = getConfig();
     if (!config?.projectId) return;
 
@@ -44,12 +48,11 @@ const Sync = (() => {
       try { app = firebase.app(); } catch { app = firebase.initializeApp(config); }
       _db = firebase.firestore(app);
 
-      /* Offline persistence (works even without network) */
       await _db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
 
       _setSyncDot('syncing');
 
-      /* If Firestore shop is empty → upload local data (first device setup) */
+      /* Always download from Firestore if it has data, else upload local */
       const probe = await col('products').limit(1).get();
       if (probe.empty) {
         await _uploadLocal();
@@ -67,6 +70,34 @@ const Sync = (() => {
     }
   }
 
+  /* ---- Manual: push local → Firestore (overwrite cloud) ---- */
+  async function pushToCloud() {
+    if (!_db) { alert('ยังไม่ได้ตั้งค่า Firebase'); return; }
+    _setSyncDot('syncing');
+    try {
+      await _uploadLocal();
+      _setSyncDot('synced');
+      if (typeof showToast === 'function') showToast('อัปโหลดข้อมูลขึ้น Cloud แล้ว ✓');
+    } catch (err) {
+      _setSyncDot('error');
+      if (typeof showToast === 'function') showToast('อัปโหลดไม่สำเร็จ: ' + err.message, 'error');
+    }
+  }
+
+  /* ---- Manual: pull Firestore → local (overwrite local) ---- */
+  async function pullFromCloud() {
+    if (!_db) { alert('ยังไม่ได้ตั้งค่า Firebase'); return; }
+    _setSyncDot('syncing');
+    try {
+      await _downloadToLocal();
+      _setSyncDot('synced');
+      if (typeof showToast === 'function') showToast('ดาวน์โหลดข้อมูลจาก Cloud แล้ว ✓');
+    } catch (err) {
+      _setSyncDot('error');
+      if (typeof showToast === 'function') showToast('ดาวน์โหลดไม่สำเร็จ: ' + err.message, 'error');
+    }
+  }
+
   /* ---- First-time: push localStorage → Firestore ---- */
   async function _uploadLocal() {
     const batch = _db.batch();
@@ -74,22 +105,34 @@ const Sync = (() => {
     DB.getSales().forEach(s => batch.set(col('sales').doc(s.id), s));
     const settings = DB.getSettings();
     if (settings) batch.set(docRef('settings/main'), settings);
+    /* shifts */
+    const shifts = DB.getShifts ? DB.getShifts() : [];
+    shifts.forEach(sh => batch.set(col('shifts').doc(sh.id), sh));
+    /* adjustments */
+    const adjs = DB.getAdjustments ? DB.getAdjustments() : [];
+    adjs.forEach(a => batch.set(col('adjustments').doc(a.id), a));
     await batch.commit();
   }
 
   /* ---- Pull Firestore → localStorage ---- */
   async function _downloadToLocal() {
-    const [pSnap, sSnap, sDoc] = await Promise.all([
+    const [pSnap, sSnap, sDoc, shSnap, aSnap] = await Promise.all([
       col('products').get(),
       col('sales').get(),
       docRef('settings/main').get(),
+      col('shifts').get(),
+      col('adjustments').get(),
     ]);
     if (!pSnap.empty)
-      localStorage.setItem('grocery_products', JSON.stringify(pSnap.docs.map(d => d.data())));
+      localStorage.setItem('grocery_products',     JSON.stringify(pSnap.docs.map(d => d.data())));
     if (!sSnap.empty)
-      localStorage.setItem('grocery_sales',    JSON.stringify(sSnap.docs.map(d => d.data())));
+      localStorage.setItem('grocery_sales',        JSON.stringify(sSnap.docs.map(d => d.data())));
     if (sDoc.exists)
-      localStorage.setItem('grocery_settings', JSON.stringify(sDoc.data()));
+      localStorage.setItem('grocery_settings',     JSON.stringify(sDoc.data()));
+    if (!shSnap.empty)
+      localStorage.setItem('grocery_shifts',       JSON.stringify(shSnap.docs.map(d => d.data())));
+    if (!aSnap.empty)
+      localStorage.setItem('grocery_adjustments',  JSON.stringify(aSnap.docs.map(d => d.data())));
     _refreshUI();
   }
 
@@ -119,6 +162,18 @@ const Sync = (() => {
       localStorage.setItem('grocery_settings', JSON.stringify(doc.data()));
       const bn = document.getElementById('brand-name');
       if (bn) bn.textContent = doc.data().shopName || 'ร้านขายของชำ';
+    });
+
+    /* Shifts */
+    col('shifts').onSnapshot({ includeMetadataChanges: false }, snap => {
+      localStorage.setItem('grocery_shifts', JSON.stringify(snap.docs.map(d => d.data())));
+      _setSyncDot('synced');
+    });
+
+    /* Adjustments */
+    col('adjustments').onSnapshot({ includeMetadataChanges: false }, snap => {
+      localStorage.setItem('grocery_adjustments', JSON.stringify(snap.docs.map(d => d.data())));
+      _setSyncDot('synced');
     });
   }
 
@@ -172,6 +227,19 @@ const Sync = (() => {
       col('sales').doc(id).delete().catch(() => {});
     };
 
+    /* adjustStock */
+    const _adjStock = DB.adjustStock.bind(DB);
+    DB.adjustStock = (id, newQty, reason) => {
+      const p = _adjStock(id, newQty, reason);
+      if (p) col('products').doc(id).set(p).catch(() => {});
+      /* also push the latest adjustment log entry */
+      const adjs = DB.getAdjustments ? DB.getAdjustments() : [];
+      const latest = adjs[adjs.length - 1];
+      if (latest && latest.productId === id)
+        col('adjustments').doc(latest.id).set(latest).catch(() => {});
+      return p;
+    };
+
     /* saveSettings */
     const _saveSets = DB.saveSettings.bind(DB);
     DB.saveSettings = data => {
@@ -216,5 +284,5 @@ const Sync = (() => {
 
   function isActive() { return _db !== null; }
 
-  return { init, getShopId, setShopId, getConfig, isActive };
+  return { init, getShopId, setShopId, getConfig, isActive, pushToCloud, pullFromCloud };
 })();

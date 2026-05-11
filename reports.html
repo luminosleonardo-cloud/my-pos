@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>รายงานกำไร — POS</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#16a34a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="POS ชำ">
+  <link rel="apple-touch-icon" href="icons/icon.svg">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <div class="app-shell">
+
+    <!-- ========== SIDEBAR ========== -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon">💹</div>
+        <span class="brand-name" id="brand-name">ร้านขายของชำ</span>
+        <span id="sync-dot" class="sync-dot" title="ไม่ได้เชื่อมต่อ cloud"></span>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="index.html" class="sidebar-link">
+          <span class="sl-icon">🛒</span>
+          <span class="sl-label">หน้าขาย (POS)</span>
+        </a>
+        <a href="inventory.html" class="sidebar-link">
+          <span class="sl-icon">📦</span>
+          <span class="sl-label">คลังสินค้า</span>
+        </a>
+        <a href="sales.html" class="sidebar-link">
+          <span class="sl-icon">📊</span>
+          <span class="sl-label">ประวัติการขาย</span>
+        </a>
+        <a href="reports.html" class="sidebar-link active">
+          <span class="sl-icon">💹</span>
+          <span class="sl-label">รายงานกำไร</span>
+        </a>
+        <a href="settings.html" class="sidebar-link">
+          <span class="sl-icon">🏪</span>
+          <span class="sl-label">ตั้งค่าร้าน</span>
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <span id="clock" class="sidebar-clock"></span>
+      </div>
+    </aside>
+
+    <!-- ========== MAIN ========== -->
+    <main class="app-main scrollable">
+      <div class="rpt-page">
+
+        <div class="rpt-page-header">
+          <h1 class="rpt-page-title">💹 รายงานกำไร-ขาดทุน</h1>
+          <button class="btn btn-outline btn-sm" onclick="exportReportCSV()">⬇️ ส่งออก CSV</button>
+        </div>
+
+        <!-- Period tabs -->
+        <div class="rpt-period-tabs">
+          <button data-period="today"  class="tab-btn" onclick="setPeriod('today')">วันนี้</button>
+          <button data-period="7days"  class="tab-btn active" onclick="setPeriod('7days')">7 วัน</button>
+          <button data-period="30days" class="tab-btn" onclick="setPeriod('30days')">30 วัน</button>
+          <button data-period="month"  class="tab-btn" onclick="setPeriod('month')">เดือนนี้</button>
+        </div>
+
+        <!-- KPI cards -->
+        <div class="rpt-kpis" id="rpt-kpis"></div>
+
+        <!-- Revenue vs Profit chart -->
+        <div class="rpt-card">
+          <div class="rpt-card-title">รายได้ vs กำไรขั้นต้น (รายวัน)</div>
+          <div class="rpt-chart-wrap">
+            <canvas id="chart-profit"></canvas>
+          </div>
+        </div>
+
+        <!-- Category breakdown -->
+        <div class="rpt-card">
+          <div class="rpt-card-title">รายได้ตามหมวดหมู่</div>
+          <div id="rpt-categories"></div>
+        </div>
+
+        <!-- Daily summary table -->
+        <div class="rpt-card">
+          <div class="rpt-card-title">สรุปรายวัน</div>
+          <div id="rpt-daily-table"></div>
+        </div>
+
+      </div>
+    </main>
+
+  </div><!-- /app-shell -->
+
+  <!-- Toast container -->
+  <div id="toast-container"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/shared.js"></script>
+  <script src="js/sync.js"></script>
+  <script src="js/reports.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
+    document.addEventListener('DOMContentLoaded', () => Sync.init());
+  </script>
+</body>
+</html>

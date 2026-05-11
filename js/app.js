@@ -26,7 +26,7 @@ function getDiscountAmt() {
   return Math.min(Math.max(0, amt), sub);
 }
 function getTotal() {
-  return Math.max(0, getSubtotal() - getDiscountAmt());
+  return Math.max(0, Math.round((getSubtotal() - getDiscountAmt()) * 100) / 100);
 }
 function getDiscountLabel() {
   if (!discountValue) return '';
@@ -119,6 +119,45 @@ function selectCategory(cat) {
   renderProducts();
 }
 
+/* ---- Cart persistence ---- */
+function saveCart() {
+  localStorage.setItem('pos_cart', JSON.stringify(
+    cart.map(i => ({ id: i.product.id, qty: i.qty }))
+  ));
+  localStorage.setItem('pos_cart_disc', JSON.stringify(
+    { type: discountType, value: discountValue }
+  ));
+}
+
+function loadCart() {
+  try {
+    const raw  = JSON.parse(localStorage.getItem('pos_cart') || '[]');
+    cart = raw
+      .map(entry => {
+        const product = allProducts.find(p => p.id === entry.id);
+        if (!product) return null;
+        return { product, qty: Math.min(entry.qty, product.quantity || 0) };
+      })
+      .filter(Boolean)
+      .filter(i => i.qty > 0);
+
+    const disc = JSON.parse(localStorage.getItem('pos_cart_disc') || 'null');
+    if (disc) {
+      discountType  = disc.type  || '฿';
+      discountValue = disc.value || 0;
+      const dv    = document.getElementById('disc-value');
+      const dtBtn = document.getElementById('disc-type-btn');
+      if (dv)    dv.value        = discountValue || '';
+      if (dtBtn) dtBtn.textContent = discountType;
+    }
+  } catch { cart = []; }
+}
+
+function clearSavedCart() {
+  localStorage.removeItem('pos_cart');
+  localStorage.removeItem('pos_cart_disc');
+}
+
 /* ---- Cart ---- */
 function addToCart(productId) {
   const product = allProducts.find(p => p.id === productId);
@@ -134,6 +173,7 @@ function addToCart(productId) {
   } else {
     cart.push({ product, qty: 1 });
   }
+  saveCart();
   renderCart();
   showToast(`เพิ่ม ${product.name}`, 'success');
 }
@@ -148,6 +188,7 @@ function changeQty(productId, delta) {
     item.qty = item.product.quantity;
     showToast(`สินค้าคงเหลือเพียง ${item.product.quantity} ชิ้น`, 'warning');
   }
+  saveCart();
   renderCart();
 }
 
@@ -158,6 +199,7 @@ function clearCart() {
   discountValue = 0;
   const dv = document.getElementById('disc-value');
   if (dv) dv.value = '';
+  clearSavedCart();
   renderCart();
 }
 
@@ -169,6 +211,7 @@ function toggleDiscountType() {
 }
 function applyDiscount() {
   discountValue = parseFloat(document.getElementById('disc-value')?.value) || 0;
+  saveCart();
   renderCartFooter();
 }
 function renderCartFooter() {
@@ -342,7 +385,7 @@ function confirmPayment() {
   const activeShift = DB.getActiveShift();
   cart.forEach(({ product, qty }) => DB.decreaseStock(product.id, qty));
   const savedSale = DB.addSale({
-    items: cart.map(({ product: p, qty }) => ({ productId: p.id, name: p.name, price: p.price, qty })),
+    items: cart.map(({ product: p, qty }) => ({ productId: p.id, name: p.name, price: p.price, costPrice: p.costPrice || 0, qty })),
     subtotal, discountAmt: discAmt, discountLabel: getDiscountLabel(),
     total, cash, change, note,
     payMethod: currentPayMethod,
@@ -352,10 +395,11 @@ function confirmPayment() {
   const saleItems = [...cart];
   cart = [];
   discountValue = 0;
+  clearSavedCart();
   const dv = document.getElementById('disc-value');
   if (dv) dv.value = '';
 
-  const meta = { subtotal, discountAmt: discAmt, discountLabel: getDiscountLabel(), note, receiptNo: savedSale.receiptNo };
+  const meta = { subtotal, discountAmt: discAmt, discountLabel: getDiscountLabel(), note, receiptNo: savedSale.receiptNo, payMethod: currentPayMethod };
   _lastReceiptData = { saleItems, total, cash, change, meta };
 
   if (Printer.connected()) {
@@ -379,35 +423,8 @@ function thermalPrintLastReceipt() {
 }
 
 function showReceipt(saleItems, total, cash, change, meta = {}) {
-  const s   = DB.getSettings();
-  const now = new Date().toLocaleString('th-TH');
-  const { subtotal, discountAmt, discountLabel, note, receiptNo } = meta;
-  document.getElementById('receipt-content').innerHTML = `
-    <div class="receipt">
-      <div class="receipt-header">
-        <div class="receipt-success-icon">✅</div>
-        <h2>${s.shopName || 'ร้านขายของชำ'}</h2>
-        ${s.address ? `<p style="font-size:0.8rem;color:var(--text-muted)">${s.address}</p>` : ''}
-        ${s.phone   ? `<p style="font-size:0.8rem;color:var(--text-muted)">โทร: ${s.phone}</p>` : ''}
-        <p style="font-size:0.8rem;color:var(--text-muted)">${now}</p>
-        ${receiptNo ? `<p style="font-size:0.78rem;color:var(--text-light)">เลขที่ ${receiptNo}</p>` : ''}
-      </div>
-      <hr class="receipt-divider">
-      ${saleItems.map(({ product: p, qty }) => `
-        <div class="receipt-row">
-          <span>${p.name} × ${qty}</span>
-          <span>฿${fmt(p.price * qty)}</span>
-        </div>`).join('')}
-      <hr class="receipt-divider">
-      ${discountAmt > 0 ? `
-        <div class="receipt-row"><span>ราคารวม</span><span>฿${fmt(subtotal)}</span></div>
-        <div class="receipt-row" style="color:var(--danger)"><span>${discountLabel || 'ส่วนลด'}</span><span>-฿${fmt(discountAmt)}</span></div>` : ''}
-      <div class="receipt-row receipt-total"><span>ยอดชำระ</span><span>฿${fmt(total)}</span></div>
-      <div class="receipt-row"><span>รับเงิน</span><span>฿${fmt(cash)}</span></div>
-      <div class="receipt-row" style="color:var(--primary);font-weight:700"><span>เงินทอน</span><span>฿${fmt(change)}</span></div>
-      ${note ? `<p class="receipt-footer-msg" style="color:var(--text-muted)">หมายเหตุ: ${note}</p>` : ''}
-      ${s.footer ? `<p class="receipt-footer-msg">${s.footer}</p>` : ''}
-    </div>`;
+  document.getElementById('receipt-content').innerHTML =
+    buildReceiptHTML(saleItems, total, cash, change, meta, { showSuccess: true });
   openModal('modal-receipt');
 }
 
@@ -468,53 +485,6 @@ function connectBtPrinter() {
 function disconnectBtPrinter() {
   Printer.disconnectBluetooth();
   showToast('ตัดการเชื่อมต่อบลูทูธแล้ว');
-}
-
-/* ---- Shop settings ---- */
-function openSettingsModal() {
-  const s = DB.getSettings();
-  document.getElementById('set-shop-name').value = s.shopName  || '';
-  document.getElementById('set-address').value   = s.address   || '';
-  document.getElementById('set-phone').value     = s.phone     || '';
-  document.getElementById('set-taxid').value     = s.taxId     || '';
-  document.getElementById('set-promptpay').value = s.promptpay || '';
-  document.getElementById('set-footer').value    = s.footer    || '';
-  const geminiEl = document.getElementById('set-gemini-key');
-  if (geminiEl) geminiEl.value = localStorage.getItem('gemini_api_key') || '';
-  const shopIdEl = document.getElementById('set-shop-id');
-  if (shopIdEl) shopIdEl.value = (typeof Sync !== 'undefined' ? Sync.getShopId() : localStorage.getItem('shop_id')) || '';
-  const fbEl = document.getElementById('set-firebase-config');
-  if (fbEl) fbEl.value = localStorage.getItem('firebase_config') || '';
-  const verEl = document.getElementById('settings-version');
-  if (verEl && typeof APP_VERSION !== 'undefined') verEl.textContent = APP_VERSION;
-  openModal('modal-settings');
-}
-
-function saveSettingsForm() {
-  DB.saveSettings({
-    shopName:  document.getElementById('set-shop-name').value.trim(),
-    address:   document.getElementById('set-address').value.trim(),
-    phone:     document.getElementById('set-phone').value.trim(),
-    taxId:     document.getElementById('set-taxid').value.trim(),
-    promptpay: document.getElementById('set-promptpay').value.trim(),
-    footer:    document.getElementById('set-footer').value.trim(),
-  });
-  const geminiEl = document.getElementById('set-gemini-key');
-  if (geminiEl) localStorage.setItem('gemini_api_key', geminiEl.value.trim());
-  const shopIdEl = document.getElementById('set-shop-id');
-  if (shopIdEl && shopIdEl.value.trim()) {
-    if (typeof Sync !== 'undefined') Sync.setShopId(shopIdEl.value);
-    else localStorage.setItem('shop_id', shopIdEl.value.trim().toUpperCase());
-  }
-  const fbEl = document.getElementById('set-firebase-config');
-  if (fbEl && fbEl.value.trim()) {
-    localStorage.setItem('firebase_config', fbEl.value.trim());
-    if (typeof Sync !== 'undefined') Sync.init();
-  }
-  const bn = document.getElementById('brand-name');
-  if (bn) bn.textContent = DB.getSettings().shopName || 'ร้านขายของชำ';
-  closeModal('modal-settings');
-  showToast('บันทึกการตั้งค่าแล้ว');
 }
 
 /* ---- Shift management ---- */
@@ -614,12 +584,104 @@ function updateShiftUI() {
   }
 }
 
+/* ---- Dashboard ---- */
+let _salesChart = null;
+
+function renderDashboard() {
+  renderSalesChart();
+  renderTopProducts();
+}
+
+function renderSalesChart() {
+  const canvas = document.getElementById('chart-sales-7d');
+  if (!canvas || typeof Chart === 'undefined') return;
+
+  const sales  = DB.getSales();
+  const labels = [];
+  const values = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const ds = d.toDateString();
+    labels.push(d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }));
+    values.push(sales.filter(s => new Date(s.createdAt).toDateString() === ds)
+      .reduce((sum, s) => sum + s.total, 0));
+  }
+
+  if (_salesChart) { _salesChart.destroy(); _salesChart = null; }
+
+  _salesChart = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: 'rgba(22,163,74,0.25)',
+        borderColor: '#16a34a',
+        borderWidth: 2,
+        borderRadius: 4,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            font: { size: 10 },
+            callback: v => v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v,
+          },
+          grid: { color: 'rgba(0,0,0,0.05)' },
+        },
+        x: { ticks: { font: { size: 10 } }, grid: { display: false } },
+      },
+    },
+  });
+}
+
+function renderTopProducts() {
+  const el = document.getElementById('top5-list');
+  if (!el) return;
+
+  const DAY30 = Date.now() - 30 * 86400000;
+  const sales = DB.getSales().filter(s => new Date(s.createdAt).getTime() >= DAY30);
+
+  const counts = {};
+  sales.forEach(s => s.items.forEach(i => {
+    counts[i.name] = (counts[i.name] || 0) + i.qty;
+  }));
+
+  const top5 = Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+
+  if (!top5.length) {
+    el.innerHTML = '<p style="font-size:0.78rem;color:var(--text-muted);padding:4px 0">ยังไม่มีข้อมูลการขาย</p>';
+    return;
+  }
+
+  const max = top5[0][1];
+  el.innerHTML = top5.map(([name, qty], i) => `
+    <div class="top5-item">
+      <span class="top5-rank">${i + 1}</span>
+      <div class="top5-bar-wrap">
+        <div class="top5-name">${name}</div>
+        <div class="top5-bar" style="width:${Math.round(qty / max * 100)}%"></div>
+      </div>
+      <span class="top5-qty">${qty} ชิ้น</span>
+    </div>`).join('');
+}
+
 /* ---- Init ---- */
 document.addEventListener('DOMContentLoaded', () => {
   allProducts = DB.getProducts();
+  loadCart();
   renderCategories();
   renderProducts();
   renderCart();
+  renderDashboard();
   Printer.refreshUI();
   updateShiftUI();
   /* update brand name from settings */

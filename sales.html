@@ -38,7 +38,11 @@
           <span class="sl-icon">📊</span>
           <span class="sl-label">ประวัติการขาย</span>
         </a>
-        <a href="#" class="sidebar-link" onclick="openSettingsModal();return false">
+        <a href="reports.html" class="sidebar-link">
+          <span class="sl-icon">💹</span>
+          <span class="sl-label">รายงานกำไร</span>
+        </a>
+        <a href="settings.html" class="sidebar-link">
           <span class="sl-icon">🏪</span>
           <span class="sl-label">ตั้งค่าร้าน</span>
         </a>
@@ -117,6 +121,23 @@
     </main>
 
   </div><!-- /app-shell -->
+
+  <!-- ========== MODAL: Reprint Receipt ========== -->
+  <div id="modal-reprint" class="modal-backdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">🧾 ใบเสร็จรับเงิน (พิมพ์ซ้ำ)</span>
+        <button class="modal-close" onclick="closeModal('modal-reprint')">✕</button>
+      </div>
+      <div id="print-receipt" class="modal-body">
+        <div id="reprint-content"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="window.print()">🖨️ พิมพ์ (PDF)</button>
+        <button class="btn btn-primary" onclick="closeModal('modal-reprint')">ปิด</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Toast container -->
   <div id="toast-container"></div>

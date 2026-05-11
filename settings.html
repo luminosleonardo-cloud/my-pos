@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>ตั้งค่า — ร้านขายของชำ</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#16a34a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="POS ชำ">
+  <link rel="apple-touch-icon" href="icons/icon.svg">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <div class="app-shell">
+
+    <!-- ========== SIDEBAR ========== -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon">🏪</div>
+        <span class="brand-name" id="brand-name">ร้านขายของชำ</span>
+        <span id="sync-dot" class="sync-dot" title="ไม่ได้เชื่อมต่อ cloud"></span>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="index.html" class="sidebar-link">
+          <span class="sl-icon">🛒</span>
+          <span class="sl-label">หน้าขาย (POS)</span>
+        </a>
+        <a href="inventory.html" class="sidebar-link">
+          <span class="sl-icon">📦</span>
+          <span class="sl-label">คลังสินค้า</span>
+          <span id="inv-badge" class="inv-badge" style="display:none">0</span>
+        </a>
+        <a href="sales.html" class="sidebar-link">
+          <span class="sl-icon">📊</span>
+          <span class="sl-label">ประวัติการขาย</span>
+        </a>
+        <a href="reports.html" class="sidebar-link">
+          <span class="sl-icon">💹</span>
+          <span class="sl-label">รายงานกำไร</span>
+        </a>
+        <a href="settings.html" class="sidebar-link active">
+          <span class="sl-icon">🏪</span>
+          <span class="sl-label">ตั้งค่าร้าน</span>
+        </a>
+        <a href="#" class="sidebar-link" onclick="openShiftModal();return false">
+          <span class="sl-icon">⏰</span>
+          <span class="sl-label" id="shift-link-text">เปิด/ปิดกะ</span>
+          <span id="shift-indicator" class="hw-dot"></span>
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <span id="clock" class="sidebar-clock"></span>
+      </div>
+    </aside>
+
+    <!-- ========== MAIN ========== -->
+    <main class="app-main scrollable">
+      <div class="inv-layout">
+
+        <!-- Page header -->
+        <div class="settings-page-header">
+          <h1 class="settings-page-title">⚙️ ตั้งค่า</h1>
+          <button class="btn btn-primary" onclick="saveAllSettings()">💾 บันทึกทั้งหมด</button>
+        </div>
+
+        <!-- ── Section: ข้อมูลร้าน ── -->
+        <div class="settings-section">
+          <div class="settings-section-title">🏪 ข้อมูลร้าน</div>
+          <div class="settings-section-body">
+            <div class="form-group">
+              <label class="form-label">ชื่อร้าน <span style="color:var(--danger)">*</span></label>
+              <input id="set-shop-name" class="form-input" type="text" placeholder="เช่น ร้านขายของชำสมใจ">
+            </div>
+            <div class="form-group">
+              <label class="form-label">ที่อยู่</label>
+              <input id="set-address" class="form-input" type="text" placeholder="เช่น 123 ถ.สุขุมวิท กรุงเทพ">
+            </div>
+            <div class="form-row">
+              <div class="form-group" style="flex:1">
+                <label class="form-label">เบอร์โทรศัพท์</label>
+                <input id="set-phone" class="form-input" type="tel" placeholder="0812345678">
+              </div>
+              <div class="form-group" style="flex:1">
+                <label class="form-label">เลขผู้เสียภาษี</label>
+                <input id="set-taxid" class="form-input" type="text" placeholder="1234567890123">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">เบอร์ PromptPay</label>
+              <input id="set-promptpay" class="form-input" type="tel" placeholder="0812345678 หรือเลขบัตร 13 หลัก">
+              <p class="form-hint">ใช้แสดง QR สำหรับรับชำระเงิน</p>
+            </div>
+            <div class="form-group">
+              <label class="form-label">ข้อความท้ายใบเสร็จ</label>
+              <input id="set-footer" class="form-input" type="text" placeholder="ขอบคุณที่ใช้บริการ">
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Section: AI ── -->
+        <div class="settings-section">
+          <div class="settings-section-title">🤖 AI Integration — Gemini</div>
+          <div class="settings-section-body">
+            <div class="form-group">
+              <label class="form-label">Gemini API Key
+                <span style="font-weight:400;color:var(--text-muted)"> — ใช้สำหรับวิเคราะห์ยอดขาย / สต็อก / ค้นหาสินค้าจากบาร์โค้ด</span>
+              </label>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <input id="set-gemini-key" class="form-input" type="password"
+                       placeholder="AIza…" autocomplete="off" style="flex:1;min-width:200px">
+                <button class="btn btn-outline btn-sm" type="button"
+                        onclick="toggleKeyVisibility('set-gemini-key','btn-eye-gemini')" id="btn-eye-gemini">
+                  👁️ แสดง
+                </button>
+                <button class="btn btn-outline btn-sm" type="button" onclick="testGeminiConnection()">
+                  🧪 ทดสอบ
+                </button>
+              </div>
+              <p class="form-hint">
+                รับ Key ฟรีได้ที่
+                <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--primary)">aistudio.google.com</a>
+                — เก็บในเครื่องของคุณเท่านั้น
+              </p>
+              <div id="gemini-test-status" style="margin-top:6px;font-size:0.82rem;min-height:18px"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Section: Cloud Sync ── -->
+        <div class="settings-section">
+          <div class="settings-section-title">☁️ Cloud Sync — Firebase Firestore</div>
+          <div class="settings-section-body">
+            <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:16px">
+              ซิงค์ข้อมูลอัตโนมัติระหว่างอุปกรณ์ — ใช้ Shop ID เดียวกันทุกเครื่องเพื่อเข้าถึงข้อมูลชุดเดียวกัน
+            </p>
+            <div class="form-group">
+              <label class="form-label">Shop ID
+                <span style="font-weight:400;color:var(--text-muted)"> — แชร์ ID นี้ให้อุปกรณ์อื่นที่ต้องการซิงค์ด้วยกัน</span>
+              </label>
+              <div style="display:flex;gap:8px;align-items:center">
+                <input id="set-shop-id" class="form-input" type="text"
+                       placeholder="เช่น ABC123" autocomplete="off"
+                       style="font-family:monospace;font-weight:700;letter-spacing:0.12em;flex:1">
+                <button class="btn btn-outline btn-sm" type="button" onclick="copyShopId()">📋 คัดลอก</button>
+              </div>
+              <p class="form-hint">ระบบสร้างให้อัตโนมัติ — เปลี่ยนได้ถ้าต้องการใช้ ID เดิมจากอุปกรณ์อื่น</p>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Firebase Config
+                <span style="font-weight:400;color:var(--text-muted)"> — JSON จาก Firebase Console</span>
+              </label>
+              <div style="display:flex;gap:8px;align-items:flex-start">
+                <textarea id="set-firebase-config" class="form-input" rows="5"
+                  placeholder='{"apiKey":"…","authDomain":"…","projectId":"…","storageBucket":"…","messagingSenderId":"…","appId":"…"}'
+                  style="font-family:monospace;font-size:0.78rem;resize:vertical;flex:1"></textarea>
+                <button class="btn btn-outline btn-sm" type="button" onclick="toggleFbConfig()"
+                        id="btn-eye-fb" style="white-space:nowrap;margin-top:2px">👁️ แสดง</button>
+              </div>
+              <p class="form-hint">
+                Firebase Console → Project Settings → Your apps → SDK setup → Config ·
+                <a href="https://console.firebase.google.com/" target="_blank" style="color:var(--primary)">console.firebase.google.com</a>
+              </p>
+            </div>
+            <div class="settings-sync-status">
+              <span id="sync-dot-pg" class="sync-dot"></span>
+              <span id="sync-status-text" style="font-size:0.82rem;color:var(--text-muted)">ยังไม่ได้เชื่อมต่อ</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Section: About ── -->
+        <div class="settings-section">
+          <div class="settings-section-title">ℹ️ เกี่ยวกับ</div>
+          <div class="settings-section-body">
+            <p style="font-size:0.88rem;color:var(--text-muted)">
+              เวอร์ชั่น: <strong id="about-version" style="color:var(--text);font-family:monospace"></strong>
+            </p>
+            <p style="font-size:0.82rem;color:var(--text-muted);margin-top:6px">
+              POS ร้านขายของชำ — Progressive Web App · ทำงานออฟไลน์ได้ · Firebase Realtime Sync · AI โดย Gemini
+            </p>
+          </div>
+        </div>
+
+        <!-- Bottom save -->
+        <div style="display:flex;justify-content:flex-end;padding-bottom:24px">
+          <button class="btn btn-primary btn-lg" onclick="saveAllSettings()">💾 บันทึกการตั้งค่า</button>
+        </div>
+
+      </div>
+    </main>
+
+  </div><!-- /app-shell -->
+
+  <div id="toast-container"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/shared.js"></script>
+  <script src="js/sync.js"></script>
+  <script src="js/settings.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
+    document.addEventListener('DOMContentLoaded', () => Sync.init().then(() => updateSyncStatus()));
+  </script>
+</body>
+</html>

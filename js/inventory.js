@@ -4,6 +4,7 @@
 
 let editingId   = null;
 let deleteId    = null;
+let adjustId    = null;
 let invSearch   = '';
 let invCategory = 'ทั้งหมด';
 
@@ -109,6 +110,7 @@ function renderTable() {
         <td>
           <div class="action-cell">
             <button class="btn btn-sm btn-outline" onclick="openEdit('${p.id}')">✏️ แก้ไข</button>
+            <button class="btn btn-sm btn-outline" onclick="openAdjustModal('${p.id}')" title="ปรับยอดสต็อก">📋 ปรับยอด</button>
             <button class="btn btn-sm btn-outline-danger" onclick="askDelete('${p.id}', '${p.name.replace(/'/g, '\\\'')}')" title="ลบ">🗑️</button>
           </div>
         </td>
@@ -143,6 +145,7 @@ function openEdit(id) {
   document.getElementById('f-cost').value       = p.costPrice || '';
   document.getElementById('f-quantity').value   = p.quantity;
   document.getElementById('f-low-stock').value  = p.lowStockThreshold;
+  document.getElementById('f-pack-size').value  = p.packSize || 12;
   document.getElementById('f-category').value   = p.category;
   if (p.image) updateImagePreview(p.image);
   else clearImage();
@@ -170,6 +173,7 @@ function saveProduct() {
   const costPrice = document.getElementById('f-cost').value;
   const quantity  = document.getElementById('f-quantity').value;
   const lowStock  = document.getElementById('f-low-stock').value;
+  const packSize  = parseInt(document.getElementById('f-pack-size').value) || 12;
   const category  = document.getElementById('f-category').value;
   const image     = document.getElementById('f-image').value;
 
@@ -184,7 +188,7 @@ function saveProduct() {
     }
   }
 
-  const data = { name, barcode, price, costPrice, quantity, category, lowStockThreshold: lowStock, image };
+  const data = { name, barcode, price, costPrice, quantity, category, lowStockThreshold: lowStock, packSize, image };
   if (editingId) {
     DB.updateProduct(editingId, data);
     showToast('แก้ไขสินค้าสำเร็จ');
@@ -234,6 +238,46 @@ function clearImage() {
   document.getElementById('img-preview').style.display     = 'none';
   document.getElementById('img-placeholder').style.display = 'flex';
   document.getElementById('btn-clear-img').style.display   = 'none';
+}
+
+/* ---- Photo camera ---- */
+let _photoStream = null;
+
+function openPhotoCamera() {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    showToast('กล้องไม่รองรับในเบราว์เซอร์นี้', 'error');
+    return;
+  }
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+    .then(stream => {
+      _photoStream = stream;
+      const video = document.getElementById('photo-video');
+      video.srcObject = stream;
+      document.getElementById('modal-photo-cam').classList.add('open');
+    })
+    .catch(() => showToast('ไม่สามารถเข้าถึงกล้องได้', 'error'));
+}
+
+function capturePhoto() {
+  const video  = document.getElementById('photo-video');
+  const canvas = document.getElementById('photo-canvas');
+  const MAX = 300;
+  let w = video.videoWidth, h = video.videoHeight;
+  if (w > h) { if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; } }
+  else       { if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; } }
+  canvas.width = w; canvas.height = h;
+  canvas.getContext('2d').drawImage(video, 0, 0, w, h);
+  updateImagePreview(canvas.toDataURL('image/jpeg', 0.82));
+  closePhotoCamera();
+}
+
+function closePhotoCamera() {
+  if (_photoStream) {
+    _photoStream.getTracks().forEach(t => t.stop());
+    _photoStream = null;
+  }
+  document.getElementById('photo-video').srcObject = null;
+  document.getElementById('modal-photo-cam').classList.remove('open');
 }
 
 /* ---- Price suggestions ---- */
@@ -777,6 +821,61 @@ function confirmImport() {
   showToast(`นำเข้าสำเร็จ — ${parts.join(', ')}`);
 }
 
+/* ---- Stock Adjustment ---- */
+function openAdjustModal(id) {
+  const p = DB.getProducts().find(x => x.id === id);
+  if (!p) return;
+  adjustId = id;
+  document.getElementById('adj-product-name').textContent = p.name;
+  document.getElementById('adj-current-qty').textContent  = p.quantity;
+  document.getElementById('adj-new-qty').value   = p.quantity;
+  document.getElementById('adj-reason').value    = 'นับสต็อก';
+  document.getElementById('adj-diff-label').textContent = '';
+  const ps   = p.packSize || 12;
+  const half = Math.ceil(ps / 2);
+  document.getElementById('adj-half-pack-label').textContent  = `(+${half})`;
+  document.getElementById('adj-full-pack-label').textContent  = `(+${ps})`;
+  document.getElementById('adj-double-pack-label').textContent = `(+${ps * 2})`;
+  openModal('modal-adjust');
+  document.getElementById('adj-new-qty').select();
+}
+
+function adjAddPack(multiplier) {
+  const p = DB.getProducts().find(x => x.id === adjustId);
+  if (!p) return;
+  const ps      = p.packSize || 12;
+  const add     = Math.ceil(ps * multiplier);
+  const input   = document.getElementById('adj-new-qty');
+  input.value   = Math.max(0, (parseInt(input.value) || 0) + add);
+  onAdjQtyInput();
+}
+
+function onAdjQtyInput() {
+  const p = DB.getProducts().find(x => x.id === adjustId);
+  if (!p) return;
+  const newQty = parseInt(document.getElementById('adj-new-qty').value) || 0;
+  const diff   = newQty - p.quantity;
+  const el     = document.getElementById('adj-diff-label');
+  if (diff === 0)      { el.textContent = ''; }
+  else if (diff > 0)   { el.textContent = `+${diff} ชิ้น`; el.style.color = 'var(--primary)'; }
+  else                 { el.textContent = `${diff} ชิ้น`;  el.style.color = 'var(--danger)'; }
+}
+
+function confirmAdjust() {
+  if (!adjustId) return;
+  const newQty = parseInt(document.getElementById('adj-new-qty').value);
+  const reason = document.getElementById('adj-reason').value || 'ปรับยอดสต็อก';
+  if (isNaN(newQty) || newQty < 0) { showToast('กรุณาระบุจำนวนที่ถูกต้อง', 'error'); return; }
+  const p = DB.adjustStock(adjustId, newQty, reason);
+  if (typeof Sync !== 'undefined' && Sync.isActive() && p) {
+    /* sync patch is applied via _patchDB in sync.js; call updateProduct to trigger cloud sync */
+  }
+  adjustId = null;
+  closeModal('modal-adjust');
+  renderTable();
+  showToast('ปรับยอดสต็อกเรียบร้อย');
+}
+
 /* ---- AI: Stock Monitor (Agent 1) ---- */
 async function analyzeStockWithAI() {
   const btn   = document.getElementById('btn-stock-analyze');
@@ -784,8 +883,8 @@ async function analyzeStockWithAI() {
   const body  = document.getElementById('ai-stock-body');
 
   if (!Agents.getKey()) {
-    showToast('กรุณาตั้งค่า Claude API Key ในตั้งค่าร้านก่อน', 'warning');
-    if (typeof openSettingsModal === 'function') openSettingsModal();
+    showToast('กรุณาตั้งค่า Gemini API Key ในตั้งค่าร้านก่อน', 'warning');
+    window.location.href = 'settings.html';
     return;
   }
 
@@ -802,7 +901,7 @@ async function analyzeStockWithAI() {
     body.innerHTML = `<div class="ai-result">${result.replace(/\n/g, '<br>')}</div>`;
   } catch (err) {
     if (err.message === 'NO_KEY') {
-      body.innerHTML = '<div class="ai-empty">⚠️ ยังไม่ได้ตั้งค่า Claude API Key — กดที่ <strong>ตั้งค่าร้าน</strong> ในเมนูซ้ายเพื่อใส่ Key</div>';
+      body.innerHTML = '<div class="ai-empty">⚠️ ยังไม่ได้ตั้งค่า Gemini API Key — กดที่ <strong>ตั้งค่าร้าน</strong> ในเมนูซ้ายเพื่อใส่ Key</div>';
     } else {
       body.innerHTML = `<div class="ai-error">❌ เกิดข้อผิดพลาด: ${err.message}</div>`;
     }
@@ -843,7 +942,7 @@ document.addEventListener('DOMContentLoaded', () => {
     el.addEventListener('click', async e => {
       if (e.target === el) {
         if (el.id === 'modal-cam-inv') await stopInvCamera();
-        else closeModal(el.id);
+        else { closeModal(el.id); }
       }
     });
   });

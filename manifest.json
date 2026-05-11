@@ -40,6 +40,16 @@
       "name": "ประวัติการขาย",
       "url": "./sales.html",
       "icons": [{ "src": "icons/icon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "รายงานกำไร",
+      "url": "./reports.html",
+      "icons": [{ "src": "icons/icon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "ตั้งค่าร้าน",
+      "url": "./settings.html",
+      "icons": [{ "src": "icons/icon.svg", "sizes": "any" }]
     }
   ]
 }

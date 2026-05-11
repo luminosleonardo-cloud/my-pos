@@ -1819,12 +1819,72 @@ ul { list-style: none; }
 }
 
 /* ============================================================
-   Print (Receipt)
+   Print (Receipt) — works for both index.html and sales.html
+   Strategy: hide ALL direct body children with display:none,
+   then show only the open receipt modal. Avoids position/
+   overflow modal-clipping bugs that affect visibility tricks.
    ============================================================ */
 @media print {
-  body * { visibility: hidden; }
-  #print-receipt, #print-receipt * { visibility: visible; }
-  #print-receipt { position: absolute; left: 0; top: 0; width: 100%; }
+  /* Remove everything from layout */
+  body > * { display: none !important; }
+
+  /* Show whichever receipt modal has .open */
+  #modal-receipt.open,
+  #modal-reprint.open {
+    display: block !important;
+    position: static !important;
+    background: none !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  /* Strip modal card chrome */
+  #modal-receipt.open .modal,
+  #modal-reprint.open .modal {
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    width: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Hide title bar and action buttons */
+  #modal-receipt.open .modal-header,
+  #modal-receipt.open .modal-footer,
+  #modal-reprint.open .modal-header,
+  #modal-reprint.open .modal-footer { display: none !important; }
+
+  /* Let modal body grow to full receipt height */
+  #modal-receipt.open .modal-body,
+  #modal-reprint.open .modal-body {
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 4px !important;
+  }
+
+  /* Thermal-friendly receipt — flatten colours to black */
+  .receipt-v2 {
+    margin: 0 auto;
+    font-size: 0.72rem !important;
+    box-shadow: none !important;
+  }
+  .rcpt-success { display: none !important; }
+  .rcpt-tear    { display: none !important; }
+  .rcpt-sum-total {
+    background: none !important;
+    border: 1px solid #000 !important;
+    border-radius: 0 !important;
+    padding: 4px 6px !important;
+    color: #000 !important;
+  }
+  .rcpt-sum-total span { color: #000 !important; }
+  .rcpt-sum-change span { color: #000 !important; }
+  .rcpt-line   { border-color: #000 !important; }
+  .rcpt-billno { color: #000 !important; }
 }
 
 /* ============================================================
@@ -2110,6 +2170,17 @@ ul { list-style: none; }
 }
 
 /* ============================================================
+   Sync manual buttons (settings modal)
+   ============================================================ */
+.sync-manual-btns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+/* ============================================================
    App Version Badge (sidebar footer)
    ============================================================ */
 .app-version {
@@ -2281,4 +2352,536 @@ ul { list-style: none; }
   gap: 6px;
   align-items: center;
   flex-wrap: wrap;
+}
+
+/* ============================================================
+   Settings page
+   ============================================================ */
+.settings-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.settings-page-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text);
+}
+
+.settings-section {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+.settings-section-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.settings-section-body {
+  padding: 20px;
+}
+
+.settings-sync-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+/* ============================================================
+   Dashboard strip (7-day chart + Top 5) — POS home page
+   ============================================================ */
+.dashboard-strip {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+}
+
+.dash-chart-wrap {
+  flex: 2;
+  min-width: 0;
+  min-height: 110px;
+  position: relative;
+}
+
+.dash-top5-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.dash-section-title {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+
+#chart-sales-7d {
+  width: 100% !important;
+  height: 90px !important;
+}
+
+/* Top 5 list */
+.top5-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.top5-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+}
+
+.top5-rank {
+  width: 16px;
+  text-align: center;
+  font-weight: 700;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.top5-bar-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.top5-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+  font-size: 0.77rem;
+  margin-bottom: 2px;
+}
+
+.top5-bar {
+  height: 4px;
+  background: var(--primary);
+  border-radius: 2px;
+  min-width: 4px;
+}
+
+.top5-qty {
+  flex-shrink: 0;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .dashboard-strip {
+    flex-direction: column;
+  }
+  .dash-chart-wrap {
+    min-height: 90px;
+  }
+}
+
+/* ============================================================
+   Stock adjust — pack quick-add buttons
+   ============================================================ */
+.adj-pack-btns {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+.adj-pack-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.adj-pack-btns .btn {
+  font-size: 0.78rem;
+  padding: 4px 10px;
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.adj-pack-btns .btn:hover {
+  background: var(--primary);
+  color: #fff;
+}
+
+/* ============================================================
+   Reports page
+   ============================================================ */
+.rpt-page {
+  padding: 20px;
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.rpt-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.rpt-page-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.rpt-period-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* KPI cards */
+.rpt-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.rpt-kpi-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+.rpt-kpi-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.rpt-kpi-icon.blue   { background: var(--secondary-light); color: var(--secondary); }
+.rpt-kpi-icon.green  { background: var(--primary-light);   color: var(--primary); }
+.rpt-kpi-icon.yellow { background: var(--warning-light);   color: var(--warning); }
+.rpt-kpi-icon.red    { background: var(--danger-light);    color: var(--danger); }
+
+.rpt-kpi-value {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.rpt-kpi-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* Section cards */
+.rpt-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.rpt-card-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+/* Chart */
+.rpt-chart-wrap {
+  height: 200px;
+  position: relative;
+}
+
+/* Category bars */
+.rpt-cat-item {
+  margin-bottom: 10px;
+}
+
+.rpt-cat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.rpt-cat-name {
+  font-size: 0.84rem;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.rpt-cat-amt {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.rpt-cat-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rpt-cat-bar {
+  height: 6px;
+  background: var(--primary);
+  border-radius: 3px;
+  min-width: 4px;
+  transition: width 0.3s ease;
+  flex-shrink: 0;
+}
+
+.rpt-cat-pct {
+  font-size: 0.72rem;
+  color: var(--text-light);
+  white-space: nowrap;
+}
+
+/* Table */
+.rpt-table-wrap {
+  overflow-x: auto;
+}
+
+.rpt-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+
+.rpt-table th {
+  text-align: left;
+  padding: 8px 10px;
+  background: var(--bg);
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.78rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.rpt-table th:not(:first-child) { text-align: right; }
+
+.rpt-table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+
+.rpt-table td:not(:first-child) { text-align: right; }
+.rpt-table tr:last-child td { border-bottom: none; }
+.rpt-table tr:hover td { background: var(--bg); }
+
+.rpt-empty {
+  font-size: 0.84rem;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 24px 0;
+}
+
+@media (max-width: 768px) {
+  .rpt-page { padding: 12px; gap: 12px; }
+  .rpt-kpis { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .rpt-kpi-card { padding: 10px 12px; }
+  .rpt-kpi-value { font-size: 0.92rem; }
+  .rpt-chart-wrap { height: 160px; }
+}
+
+/* ============================================================
+   Receipt v2 — redesigned receipt (modal display)
+   ============================================================ */
+.receipt-v2 {
+  font-family: 'Sarabun', sans-serif;
+  font-size: 0.875rem;   /* overridden inline by buildReceiptHTML per paper size */
+  max-width: 302px;      /* overridden inline; fallback = 80mm */
+  margin: 0 auto;
+  background: #fff;
+  color: #1e293b;
+  padding: 4px 0 0;
+}
+
+/* Success checkmark (fresh sale only) */
+.rcpt-success {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 auto 14px;
+  box-shadow: 0 4px 12px rgba(22,163,74,0.35);
+}
+
+/* Shop header */
+.rcpt-header { text-align: center; padding: 0 8px 12px; }
+.rcpt-shopname {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  margin-bottom: 4px;
+}
+.rcpt-shopinfo {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* Dashed divider */
+.rcpt-line {
+  border: none;
+  border-top: 1.5px dashed #cbd5e1;
+  margin: 10px 0;
+}
+
+/* Meta rows (date / time / bill no / payment) */
+.rcpt-meta { padding: 0 4px; }
+.rcpt-meta-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  line-height: 1.8;
+  color: var(--text-muted);
+}
+.rcpt-meta-row span:last-child { color: var(--text); font-weight: 500; }
+.rcpt-billno {
+  font-family: 'Courier New', monospace;
+  font-weight: 700;
+  color: var(--primary) !important;
+  letter-spacing: 0.5px;
+}
+
+/* Item list */
+.rcpt-items { padding: 2px 0; }
+.rcpt-item { padding: 5px 0; border-bottom: 1px solid #f1f5f9; }
+.rcpt-item:last-child { border-bottom: none; }
+.rcpt-iname {
+  font-weight: 600;
+  font-size: 0.86rem;
+  margin-bottom: 2px;
+  line-height: 1.3;
+}
+.rcpt-idetail {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.rcpt-iunit {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+.rcpt-iamt {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Item count line */
+.rcpt-count {
+  text-align: center;
+  font-size: 0.74rem;
+  color: var(--text-light);
+  padding: 4px 0 2px;
+}
+
+/* Summary section */
+.rcpt-sum { padding: 0 2px; }
+.rcpt-sum-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  line-height: 1.9;
+  color: var(--text-muted);
+}
+.rcpt-sum-row span:last-child { color: var(--text); }
+.rcpt-disc { color: var(--danger) !important; }
+.rcpt-disc span { color: var(--danger) !important; }
+
+/* Total highlight box */
+.rcpt-sum-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--primary-light);
+  border: 1.5px solid var(--primary-mid);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  margin: 6px 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--primary-dark);
+}
+
+/* Change row */
+.rcpt-sum-change { color: var(--secondary) !important; font-weight: 600; }
+.rcpt-sum-change span { color: var(--secondary) !important; }
+
+/* Note */
+.rcpt-note {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  padding: 2px 4px;
+}
+
+/* Footer */
+.rcpt-footer { text-align: center; padding: 4px 8px; }
+.rcpt-footer-txt {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+/* Torn paper bottom edge */
+.rcpt-tear {
+  height: 12px;
+  margin-top: 12px;
+  background:
+    radial-gradient(circle at 50% 0%, #fff 6px, transparent 6px),
+    repeating-linear-gradient(90deg, #fff 0px, #fff 6px, transparent 6px, transparent 12px);
+  background-size: 12px 12px, 12px 12px;
+  background-position: 0 0, 0 0;
+  opacity: 0.8;
+  border-top: 1px dashed #cbd5e1;
 }

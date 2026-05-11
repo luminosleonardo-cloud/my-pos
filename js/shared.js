@@ -49,49 +49,99 @@ function updateShiftUI() {
   }
 }
 
-/* ---- Shop settings ---- */
-function openSettingsModal() {
-  const s = DB.getSettings();
-  document.getElementById('set-shop-name').value = s.shopName  || '';
-  document.getElementById('set-address').value   = s.address   || '';
-  document.getElementById('set-phone').value     = s.phone     || '';
-  document.getElementById('set-taxid').value     = s.taxId     || '';
-  document.getElementById('set-promptpay').value = s.promptpay || '';
-  document.getElementById('set-footer').value    = s.footer    || '';
-  const geminiEl = document.getElementById('set-gemini-key');
-  if (geminiEl) geminiEl.value = localStorage.getItem('gemini_api_key') || '';
-  const shopIdEl = document.getElementById('set-shop-id');
-  if (shopIdEl) shopIdEl.value = (typeof Sync !== 'undefined' ? Sync.getShopId() : localStorage.getItem('shop_id')) || '';
-  const fbEl = document.getElementById('set-firebase-config');
-  if (fbEl) fbEl.value = localStorage.getItem('firebase_config') || '';
-  openModal('modal-settings');
+/* ---- Receipt HTML builder (screen display) ---- */
+function buildReceiptHTML(saleItems, total, cash, change, meta = {}, opts = {}) {
+  const { subtotal, discountAmt, discountLabel, note, receiptNo, payMethod } = meta;
+  const { showSuccess = false, createdAt = null } = opts;
+  const s       = DB.getSettings();
+  const hasDisc = (discountAmt || 0) > 0;
+  const isQR    = payMethod === 'qr';
+  const _f = n => Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 });
+
+  const dt       = new Date(createdAt || Date.now());
+  const dateStr  = dt.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+  const timeStr  = dt.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+  const totalQty = saleItems.reduce((sum, i) => sum + i.qty, 0);
+
+  /* Paper-width-aware sizing: 58mm ≈ 220px / 80mm ≈ 302px at 96dpi */
+  const hwPaper  = parseInt(localStorage.getItem('hw_paper') || '58');
+  const rcptMaxW = hwPaper === 80 ? '302px' : '220px';
+  const rcptFont = hwPaper === 80 ? '0.875rem' : '0.8rem';
+
+  return `
+  <div class="receipt-v2" style="max-width:${rcptMaxW};font-size:${rcptFont}"
+       data-paper="${hwPaper}">
+    ${showSuccess ? `<div class="rcpt-success"><span>✓</span></div>` : ''}
+
+    <div class="rcpt-header">
+      <div class="rcpt-shopname">${s.shopName || 'ร้านขายของชำ'}</div>
+      ${s.address ? `<div class="rcpt-shopinfo">${s.address}</div>` : ''}
+      ${s.phone   ? `<div class="rcpt-shopinfo">📞 ${s.phone}</div>` : ''}
+      ${s.taxId   ? `<div class="rcpt-shopinfo">เลขผู้เสียภาษี: ${s.taxId}</div>` : ''}
+    </div>
+
+    <div class="rcpt-line"></div>
+
+    <div class="rcpt-meta">
+      <div class="rcpt-meta-row"><span>วันที่</span><span>${dateStr}</span></div>
+      <div class="rcpt-meta-row"><span>เวลา</span><span>${timeStr} น.</span></div>
+      ${receiptNo ? `<div class="rcpt-meta-row"><span>เลขที่บิล</span><span class="rcpt-billno">#${receiptNo}</span></div>` : ''}
+      <div class="rcpt-meta-row"><span>วิธีชำระ</span><span>${isQR ? '📱 QR PromptPay' : '💵 เงินสด'}</span></div>
+    </div>
+
+    <div class="rcpt-line"></div>
+
+    <div class="rcpt-items">
+      ${saleItems.map(({ product: p, qty }) => `
+        <div class="rcpt-item">
+          <div class="rcpt-iname">${p.name}</div>
+          <div class="rcpt-idetail">
+            <span class="rcpt-iunit">${qty} × ฿${_f(p.price)}</span>
+            <span class="rcpt-iamt">฿${_f(p.price * qty)}</span>
+          </div>
+        </div>`).join('')}
+    </div>
+    <div class="rcpt-count">${totalQty} ชิ้น · ${saleItems.length} รายการ</div>
+
+    <div class="rcpt-line"></div>
+
+    <div class="rcpt-sum">
+      ${hasDisc ? `
+        <div class="rcpt-sum-row">
+          <span>ราคาก่อนลด</span><span>฿${_f(subtotal)}</span>
+        </div>
+        <div class="rcpt-sum-row rcpt-disc">
+          <span>${discountLabel || 'ส่วนลด'}</span><span>−฿${_f(discountAmt)}</span>
+        </div>` : ''}
+      <div class="rcpt-sum-total">
+        <span>ยอดชำระ</span><span>฿${_f(total)}</span>
+      </div>
+      <div class="rcpt-sum-row">
+        <span>รับเงิน</span><span>฿${_f(cash)}</span>
+      </div>
+      <div class="rcpt-sum-row rcpt-sum-change">
+        <span>เงินทอน</span><span>฿${_f(change)}</span>
+      </div>
+    </div>
+
+    ${note ? `
+      <div class="rcpt-line"></div>
+      <div class="rcpt-note">📝 ${note}</div>` : ''}
+
+    <div class="rcpt-line"></div>
+
+    <div class="rcpt-footer">
+      <div class="rcpt-footer-txt">${s.footer || 'ขอบคุณที่ใช้บริการ'}</div>
+      ${isQR && s.promptpay ? `<div class="rcpt-shopinfo" style="margin-top:4px">PromptPay: ${s.promptpay}</div>` : ''}
+    </div>
+
+    <div class="rcpt-tear"></div>
+  </div>`;
 }
 
-function saveSettingsForm() {
-  DB.saveSettings({
-    shopName:  document.getElementById('set-shop-name').value.trim(),
-    address:   document.getElementById('set-address').value.trim(),
-    phone:     document.getElementById('set-phone').value.trim(),
-    taxId:     document.getElementById('set-taxid').value.trim(),
-    promptpay: document.getElementById('set-promptpay').value.trim(),
-    footer:    document.getElementById('set-footer').value.trim(),
-  });
-  const geminiEl = document.getElementById('set-gemini-key');
-  if (geminiEl) localStorage.setItem('gemini_api_key', geminiEl.value.trim());
-  const shopIdEl = document.getElementById('set-shop-id');
-  if (shopIdEl && shopIdEl.value.trim()) {
-    if (typeof Sync !== 'undefined') Sync.setShopId(shopIdEl.value);
-    else localStorage.setItem('shop_id', shopIdEl.value.trim().toUpperCase());
-  }
-  const fbEl = document.getElementById('set-firebase-config');
-  if (fbEl && fbEl.value.trim()) {
-    localStorage.setItem('firebase_config', fbEl.value.trim());
-    if (typeof Sync !== 'undefined') Sync.init();
-  }
-  const bn = document.getElementById('brand-name');
-  if (bn) bn.textContent = DB.getSettings().shopName || 'ร้านขายของชำ';
-  closeModal('modal-settings');
-  if (typeof showToast === 'function') showToast('บันทึกการตั้งค่าแล้ว');
+/* ---- Shop settings — redirect to dedicated settings page ---- */
+function openSettingsModal() {
+  window.location.href = 'settings.html';
 }
 
 /* ---- Shift management ---- */
@@ -186,84 +236,12 @@ function showShiftSummary(shift) {
   openModal('modal-shift-summary');
 }
 
-/* ---- Inject shared modals (skipped if already in the HTML) ---- */
+/* ---- Inject shared modals (shift modals only — settings moved to settings.html) ---- */
 function _injectSharedModals() {
-  if (document.getElementById('modal-settings')) return; /* index.html already has them */
+  if (document.getElementById('modal-shift-open')) return; /* already in HTML */
 
   const wrap = document.createElement('div');
   wrap.innerHTML = `
-  <!-- ========== MODAL: Shop Settings ========== -->
-  <div id="modal-settings" class="modal-backdrop">
-    <div class="modal modal-wide">
-      <div class="modal-header">
-        <span class="modal-title">🏪 ตั้งค่าร้าน</span>
-        <button class="modal-close" onclick="closeModal('modal-settings')">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="form-row">
-          <div class="form-group" style="flex:1">
-            <label class="form-label">ชื่อร้าน *</label>
-            <input id="set-shop-name" class="form-input" type="text" placeholder="เช่น ร้านขายของชำสมใจ">
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">ที่อยู่</label>
-          <input id="set-address" class="form-input" type="text" placeholder="เช่น 123 ถ.สุขุมวิท กรุงเทพ">
-        </div>
-        <div class="form-row">
-          <div class="form-group" style="flex:1">
-            <label class="form-label">เบอร์โทรศัพท์</label>
-            <input id="set-phone" class="form-input" type="tel" placeholder="0812345678">
-          </div>
-          <div class="form-group" style="flex:1">
-            <label class="form-label">เลขผู้เสียภาษี</label>
-            <input id="set-taxid" class="form-input" type="text" placeholder="1234567890123">
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">เบอร์ PromptPay</label>
-          <input id="set-promptpay" class="form-input" type="tel" placeholder="0812345678 หรือเลขบัตร 13 หลัก">
-          <p style="font-size:0.78rem;color:var(--text-muted);margin-top:4px">ใช้แสดง QR สำหรับรับชำระเงิน</p>
-        </div>
-        <div class="form-group">
-          <label class="form-label">ข้อความท้ายใบเสร็จ</label>
-          <input id="set-footer" class="form-input" type="text" placeholder="ขอบคุณที่ใช้บริการ">
-        </div>
-        <hr style="margin:16px 0;border-color:var(--border)">
-        <div class="form-group">
-          <label class="form-label">🤖 Gemini API Key <span style="font-weight:400;color:var(--text-muted)">(สำหรับ AI วิเคราะห์ยอดขาย / สต็อก / บาร์โค้ด)</span></label>
-          <input id="set-gemini-key" class="form-input" type="password" placeholder="AIza…" autocomplete="off">
-          <p style="font-size:0.78rem;color:var(--text-muted);margin-top:4px">รับ Key ฟรีได้ที่ <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--primary)">aistudio.google.com</a> — เก็บในเครื่องของคุณเท่านั้น</p>
-        </div>
-        <hr style="margin:16px 0;border-color:var(--border)">
-        <div class="form-group">
-          <label class="form-label">☁️ Shop ID <span style="font-weight:400;color:var(--text-muted)">(ใส่ ID เดียวกันทุกอุปกรณ์เพื่อซิงค์ข้อมูล)</span></label>
-          <div style="display:flex;gap:8px;align-items:center">
-            <input id="set-shop-id" class="form-input" type="text" placeholder="SHOP ID" autocomplete="off" style="font-family:monospace;font-weight:700;letter-spacing:0.1em">
-            <button class="btn btn-outline btn-sm" type="button" onclick="copyShopId()" style="white-space:nowrap">📋 คัดลอก</button>
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Firebase Config <span style="font-weight:400;color:var(--text-muted)">(JSON จาก Firebase Console)</span></label>
-          <textarea id="set-firebase-config" class="form-input" rows="4"
-            placeholder='{"apiKey":"…","authDomain":"…","projectId":"…","storageBucket":"…","messagingSenderId":"…","appId":"…"}'
-            style="font-family:monospace;font-size:0.78rem;resize:vertical"></textarea>
-          <p style="font-size:0.78rem;color:var(--text-muted);margin-top:4px">
-            Firebase Console → Project Settings → Your apps → SDK setup → Config
-            · <a href="https://console.firebase.google.com/" target="_blank" style="color:var(--primary)">console.firebase.google.com</a>
-          </p>
-        </div>
-      </div>
-      <div class="modal-footer" style="justify-content:space-between;align-items:center">
-        <span style="font-size:0.72rem;color:var(--text-muted);opacity:0.6">${APP_VERSION}</span>
-        <div style="display:flex;gap:8px">
-          <button class="btn btn-ghost" onclick="closeModal('modal-settings')">ยกเลิก</button>
-          <button class="btn btn-primary" onclick="saveSettingsForm()">💾 บันทึก</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- ========== MODAL: Open Shift ========== -->
   <div id="modal-shift-open" class="modal-backdrop">
     <div class="modal">
@@ -350,7 +328,7 @@ function _injectSharedModals() {
   });
 }
 
-const APP_VERSION = 'v1.2.0';
+const APP_VERSION = 'v2026.05.11';
 
 function copyShopId() {
   const id = document.getElementById('set-shop-id')?.value || localStorage.getItem('shop_id') || '';
