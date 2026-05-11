@@ -3,6 +3,22 @@
    (settings modal, shift management, clock, modal helpers)
    ============================================================ */
 
+/* ---- Global helpers (available on every page) ---- */
+function fmt(n) {
+  return Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 });
+}
+
+function showToast(msg, type = 'success') {
+  const c = document.getElementById('toast-container');
+  if (!c) return;
+  const el = document.createElement('div');
+  const icons = { success: '✅', error: '❌', warning: '⚠️' };
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span class="toast-icon">${icons[type] || '✅'}</span><span class="toast-msg">${msg}</span>`;
+  c.appendChild(el);
+  setTimeout(() => { el.classList.add('hiding'); setTimeout(() => el.remove(), 280); }, 2800);
+}
+
 /* ---- Modal helpers (safe to redefine on every page) ---- */
 function openModal(id) {
   document.getElementById(id)?.classList.add('open');
@@ -159,18 +175,19 @@ function confirmOpenShift() {
   DB.openShift(cash);
   closeModal('modal-shift-open');
   updateShiftUI();
-  if (typeof showToast === 'function') showToast('เปิดกะแล้ว — เงินเปิดกะ ฿' + Number(cash).toLocaleString('th-TH', { minimumFractionDigits: 2 }));
+  showToast('เปิดกะแล้ว — เงินเปิดกะ ฿' + fmt(cash));
 }
+
+let _shiftCloseSales = null;
 
 function openCloseShiftModal() {
   const shift = DB.getActiveShift();
   if (!shift) return;
   const openedAt   = new Date(shift.openedAt);
-  const sales      = DB.getSales().filter(s => new Date(s.createdAt) >= openedAt);
-  const totalSales = sales.reduce((sum, s) => sum + s.total, 0);
-  const txCount    = sales.length;
+  _shiftCloseSales = DB.getSales().filter(s => new Date(s.createdAt) >= openedAt);
+  const totalSales = _shiftCloseSales.reduce((sum, s) => sum + s.total, 0);
+  const txCount    = _shiftCloseSales.length;
   const expected   = shift.startCash + totalSales;
-  const fmt = n => Number(n).toLocaleString('th-TH', { minimumFractionDigits: 2 });
 
   document.getElementById('shift-close-opened').textContent    = openedAt.toLocaleString('th-TH');
   document.getElementById('shift-close-startcash').textContent = '฿' + fmt(shift.startCash);
@@ -186,10 +203,8 @@ function openCloseShiftModal() {
 
 function calcDiscrepancy() {
   const shift = DB.getActiveShift();
-  if (!shift) return;
-  const fmt = n => Number(n).toLocaleString('th-TH', { minimumFractionDigits: 2 });
-  const sales      = DB.getSales().filter(s => new Date(s.createdAt) >= new Date(shift.openedAt));
-  const totalSales = sales.reduce((sum, s) => sum + s.total, 0);
+  if (!shift || !_shiftCloseSales) return;
+  const totalSales = _shiftCloseSales.reduce((sum, s) => sum + s.total, 0);
   const expected   = shift.startCash + totalSales;
   const actual     = parseFloat(document.getElementById('shift-close-actual').value) || 0;
   const diff       = actual - expected;
@@ -200,11 +215,9 @@ function calcDiscrepancy() {
 
 function confirmCloseShift() {
   const actual = parseFloat(document.getElementById('shift-close-actual').value);
-  if (isNaN(actual)) {
-    if (typeof showToast === 'function') showToast('กรุณาระบุยอดเงินที่นับได้', 'warning');
-    return;
-  }
+  if (isNaN(actual)) { showToast('กรุณาระบุยอดเงินที่นับได้', 'warning'); return; }
   const closed = DB.closeShift(actual);
+  _shiftCloseSales = null;
   closeModal('modal-shift-close');
   updateShiftUI();
   if (typeof Printer !== 'undefined' && Printer.connected() && closed) {
@@ -215,7 +228,6 @@ function confirmCloseShift() {
 
 function showShiftSummary(shift) {
   if (!shift) return;
-  const fmt = n => Number(n).toLocaleString('th-TH', { minimumFractionDigits: 2 });
   const { startCash, openedAt, closedAt, actualCash, summary } = shift;
   const { totalSales, txCount, expectedCash, discrepancy } = summary;
   const diffColor = discrepancy === 0 ? 'var(--primary)' : discrepancy > 0 ? 'var(--warning)' : 'var(--danger)';

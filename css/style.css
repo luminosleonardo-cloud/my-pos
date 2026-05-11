@@ -80,7 +80,7 @@ ul { list-style: none; }
 .app-shell {
   display: flex;
   height: 100vh;
-  overflow: clip; /* clips without blocking child scroll containers */
+  overflow-x: hidden; /* prevent horizontal bleed; don't use clip — breaks iOS scroll */
 }
 
 .sidebar {
@@ -195,9 +195,13 @@ ul { list-style: none; }
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0; /* prevent flex from expanding beyond viewport in column parents */
   background: var(--bg);
 }
-.app-main.scrollable { overflow-y: auto; }
+.app-main.scrollable {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
 
 /* ============================================================
    POS Layout
@@ -209,11 +213,13 @@ ul { list-style: none; }
   overflow: hidden;
   align-items: stretch;
   container-type: inline-size;
+  min-height: 0; /* allow flex shrink so product-grid scroll container gets a bounded height */
 }
 
 .pos-main {
   flex: 1 1 340px;
   min-width: 0;
+  min-height: 0; /* required: lets column flex children (product-grid) get a finite height */
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -414,13 +420,14 @@ ul { list-style: none; }
   flex-direction: column;
   overflow: hidden;
 }
-/* Container query: stack cart below products when pos-layout is narrow */
+/* Container query: stack cart below products when pos-layout is narrow.
+   Only fires on desktop (>1024px) where pos-layout is always >660px — kept as a safety net. */
 @container (max-width: 660px) {
   .pos-cart {
     flex: 1 0 100%;
     border-left: none;
     border-top: 2px solid var(--border);
-    max-height: 360px;
+    max-height: 320px;
   }
   .pos-main { overflow: visible; }
 }
@@ -1191,9 +1198,11 @@ ul { list-style: none; }
 }
 
 /* ============================================================
-   Mobile (≤ 700px)
+   Mobile + Tablet (≤ 1024px)
+   Covers all phones AND ALL iPads in portrait mode.
+   Landscape iPads (1133 px+) and desktops get the full desktop layout.
    ============================================================ */
-@media (max-width: 700px) {
+@media (max-width: 1024px) {
 
   /* ── App shell ── */
   .app-shell { flex-direction: column; height: 100svh; overflow: hidden; }
@@ -1278,21 +1287,14 @@ ul { list-style: none; }
   .pos-main    { padding: 10px 10px 130px !important; overflow: visible !important; gap: 8px !important; }
   .pos-cart    { display: none !important; }
   .product-grid {
-    grid-template-columns: repeat(3, 1fr) !important;
-    gap: 7px !important;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)) !important;
+    gap: 8px !important;
     overflow-y: visible !important;
     padding-right: 0 !important;
   }
-  .product-card    { padding: 10px 6px 8px; gap: 5px; border-radius: var(--radius); }
-  .product-emoji   { width: 44px; height: 44px; font-size: 1.45rem; }
-  .product-thumb   { width: 44px; height: 44px; }
-  .product-name    { font-size: 0.74rem; }
-  .product-price   { font-size: 0.86rem; }
   .product-stock-label { display: none; }
   .stock-badge     { font-size: 0.56rem; padding: 1px 4px; top: 4px; right: 4px; }
-  .search-box input { font-size: 0.88rem; padding: 9px 13px 9px 36px; }
-  .btn-scan         { padding: 9px 10px; font-size: 0.78rem; }
-  .tab-btn          { padding: 4px 10px; font-size: 0.78rem; }
+  .tab-btn          { padding: 4px 10px; font-size: 0.82rem; }
 
   /* ── Mobile cart bar ── */
   .mobile-cart-bar {
@@ -1309,7 +1311,7 @@ ul { list-style: none; }
     box-shadow: 0 -3px 16px rgba(0,0,0,0.2);
     transition: transform 0.22s cubic-bezier(0.25,0.46,0.45,0.94);
   }
-  .mobile-cart-bar.hidden { transform: translateY(110%); pointer-events: none; }
+  .mobile-cart-bar.hidden { display: none !important; }
   .mcb-left   { display: flex; align-items: center; gap: 7px; }
   .mcb-count  {
     background: white; color: var(--primary);
@@ -1410,12 +1412,52 @@ ul { list-style: none; }
   .payment-total .pt-amount { font-size: 2.2rem; }
 }
 
-/* ============================================================
-   Tablet (701–1024 px)
-   ============================================================ */
+/* ── Phone-only tweaks (≤ 700px) ── */
+/* ── Phone-only tweaks (≤ 700px) ── */
+@media (max-width: 700px) {
+  .product-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 7px !important;
+  }
+  .product-card  { padding: 10px 6px 8px; gap: 5px; border-radius: var(--radius); }
+  .product-emoji { width: 44px; height: 44px; font-size: 1.45rem; }
+  .product-thumb { width: 44px; height: 44px; }
+  .product-name  { font-size: 0.74rem; }
+  .product-price { font-size: 0.86rem; }
+  .search-box input { font-size: 0.88rem; padding: 9px 13px 9px 36px; }
+  .btn-scan         { padding: 9px 10px; font-size: 0.78rem; }
+  .tab-btn          { padding: 4px 10px; font-size: 0.78rem; }
+}
+
+/* ── Tablet portrait tweaks (701–1024px) ── */
 @media (min-width: 701px) and (max-width: 1024px) {
+  /* More columns on wider screens — auto-fill handles it nicely */
+  .product-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important;
+    gap: 10px !important;
+  }
+  .product-card  { padding: 14px 10px 12px; }
+  .product-thumb { width: 56px; height: 56px; }
+  .product-emoji { width: 56px; height: 56px; font-size: 1.7rem; }
+  .product-name  { font-size: 0.82rem; }
+}
+
+/* ============================================================
+   Tablet landscape + desktop (≥ 1025px)
+   All landscape iPads (1133 px+) and desktops.
+   ============================================================ */
+@media (min-width: 1025px) and (max-width: 1280px) {
   .product-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
   .stats-grid   { grid-template-columns: repeat(2, 1fr); }
+
+  /* Slightly narrower cart on smaller landscape tablets */
+  .pos-cart { flex: 0 0 clamp(260px, 28vw, 340px); }
+
+  /* Hide less-important inventory columns to fit the table */
+  .data-table th:nth-child(2),
+  .data-table td:nth-child(2),
+  .data-table th:nth-child(6),
+  .data-table td:nth-child(6) { display: none; }
 }
 
 /* ============================================================
@@ -2488,6 +2530,7 @@ ul { list-style: none; }
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 12px 14px;
+  flex-shrink: 0; /* never squash the chart when the product grid needs space */
 }
 
 .dash-chart-wrap {

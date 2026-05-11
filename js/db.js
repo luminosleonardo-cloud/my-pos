@@ -28,15 +28,27 @@ const DB = (() => {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   }
 
+  /* ---------- Cache ---------- */
+  let _productsCache = null;
+  let _salesCache    = null;
+
+  function invalidateCache() {
+    _productsCache = null;
+    _salesCache    = null;
+  }
+
   /* ---------- Products ---------- */
 
   function getProducts() {
+    if (_productsCache) return _productsCache;
     try {
-      return JSON.parse(localStorage.getItem(PRODUCTS_KEY) || '[]');
-    } catch { return []; }
+      _productsCache = JSON.parse(localStorage.getItem(PRODUCTS_KEY) || '[]');
+    } catch { _productsCache = []; }
+    return _productsCache;
   }
 
   function saveProducts(products) {
+    _productsCache = products;
     localStorage.setItem(PRODUCTS_KEY, JSON.stringify(products));
   }
 
@@ -51,6 +63,7 @@ const DB = (() => {
       quantity: parseInt(data.quantity) || 0,
       category: data.category || 'อื่นๆ',
       lowStockThreshold: parseInt(data.lowStockThreshold) || 5,
+      packSize: parseInt(data.packSize) || 12,
       costPrice: parseFloat(data.costPrice) || 0,
       image: data.image || '',
       createdAt: now,
@@ -74,6 +87,8 @@ const DB = (() => {
       category: data.category ?? products[idx].category,
       lowStockThreshold: data.lowStockThreshold !== undefined
         ? parseInt(data.lowStockThreshold) : products[idx].lowStockThreshold,
+      packSize: data.packSize !== undefined
+        ? parseInt(data.packSize) || 12 : (products[idx].packSize || 12),
       costPrice: data.costPrice !== undefined ? parseFloat(data.costPrice) || 0 : products[idx].costPrice,
       image: data.image !== undefined ? data.image : products[idx].image,
       updatedAt: new Date().toISOString(),
@@ -160,9 +175,11 @@ const DB = (() => {
   /* ---------- Sales ---------- */
 
   function getSales() {
+    if (_salesCache) return _salesCache;
     try {
-      return JSON.parse(localStorage.getItem(SALES_KEY) || '[]');
-    } catch { return []; }
+      _salesCache = JSON.parse(localStorage.getItem(SALES_KEY) || '[]');
+    } catch { _salesCache = []; }
+    return _salesCache;
   }
 
   function getNextReceiptNo() {
@@ -180,12 +197,14 @@ const DB = (() => {
       createdAt: new Date().toISOString(),
     };
     sales.push(newSale);
+    _salesCache = sales;
     localStorage.setItem(SALES_KEY, JSON.stringify(sales));
     return newSale;
   }
 
   function deleteSale(id) {
-    localStorage.setItem(SALES_KEY, JSON.stringify(getSales().filter(s => s.id !== id)));
+    _salesCache = getSales().filter(s => s.id !== id);
+    localStorage.setItem(SALES_KEY, JSON.stringify(_salesCache));
   }
 
   function getTodaySales() {
@@ -303,5 +322,6 @@ const DB = (() => {
     getSettings, saveSettings,
     getShifts, getActiveShift, openShift, closeShift,
     adjustStock, getAdjustments,
+    invalidateCache,
   };
 })();

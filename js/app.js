@@ -11,19 +11,59 @@ let currentPayMethod  = 'cash';
 let discountType      = '฿';
 let discountValue     = 0;
 
-/* ---- Helpers ---- */
-function fmt(n) {
-  return Number(n).toLocaleString('th-TH', { minimumFractionDigits: 2 });
+/* ---- Customer Display (BroadcastChannel) ---- */
+let _displayChannel   = null;
+let _displayWin       = null;
+
+function _openDisplayChannel() {
+  try {
+    _displayChannel = new BroadcastChannel('pos_customer_display');
+    _displayChannel.onmessage = e => {
+      if (e.data?.type === 'request_state') _broadcastCart();
+    };
+  } catch { _displayChannel = null; }
 }
 
+function _broadcastCart() {
+  if (!_displayChannel) return;
+  const settings = DB.getSettings();
+  _displayChannel.postMessage({
+    type: 'cart_update',
+    shopName: settings.shopName || 'ร้านขายของชำ',
+    cart: cart.map(i => ({
+      name: i.product.name,
+      category: i.product.category,
+      image: i.product.image || '',
+      price: i.product.price,
+      qty: i.qty,
+      lineTotal: i.product.price * i.qty,
+    })),
+    subtotal: getSubtotal(),
+    discountAmt: getDiscountAmt(),
+    discountLabel: getDiscountLabel(),
+    total: getTotal(),
+  });
+}
+
+function openCustomerDisplay() {
+  if (_displayWin && !_displayWin.closed) {
+    _displayWin.focus();
+  } else {
+    _displayWin = window.open('customer-display.html', 'customer_display',
+      'width=1024,height=600,menubar=no,toolbar=no,location=no,status=no');
+  }
+  if (!_displayChannel) _openDisplayChannel();
+}
+
+/* ---- Helpers ---- */
 function getSubtotal() {
-  return cart.reduce((s, i) => s + i.product.price * i.qty, 0);
+  return Math.round(cart.reduce((s, i) => s + i.product.price * i.qty, 0) * 100) / 100;
 }
 function getDiscountAmt() {
   if (!discountValue) return 0;
   const sub = getSubtotal();
-  const amt  = discountType === '%' ? sub * discountValue / 100 : discountValue;
-  return Math.min(Math.max(0, amt), sub);
+  const amt  = discountType === '%' ? Math.round(sub * discountValue) / 100 : discountValue;
+  return Math.round(Math.min(Math.max(0, amt), sub) * 100) / 100;
 }
 function getTotal() {
   return Math.max(0, Math.round((getSubtotal() - getDiscountAmt()) * 100) / 100);
@@ -31,19 +71,6 @@ function getTotal() {
 function getDiscountLabel() {
   if (!discountValue) return '';
   return discountType === '%' ? `ส่วนลด ${discountValue}%` : 'ส่วนลด';
-}
-
-function showToast(msg, type = 'success') {
-  const c = document.getElementById('toast-container');
-  const el = document.createElement('div');
-  const icons = { success: '✅', error: '❌', warning: '⚠️' };
-  el.className = `toast ${type}`;
-  el.innerHTML = `<span class="toast-icon">${icons[type] || '✅'}</span><span class="toast-msg">${msg}</span>`;
-  c.appendChild(el);
-  setTimeout(() => {
-    el.classList.add('hiding');
-    setTimeout(() => el.remove(), 280);
-  }, 2800);
 }
 
 /* ---- Clock ---- */
@@ -158,6 +185,28 @@ function clearSavedCart() {
   localStorage.removeItem('pos_cart_disc');
 }
 
+/* ---- Cart item HTML (shared between renderCart and renderCartSheet) ---- */
+function cartItemHTML(p, qty) {
+  const img = p.image
+    ? `<img src="${p.image}" alt="${p.name}" class="cart-item-img"
+           onerror="this.outerHTML='<span class=\\'cart-item-emoji\\'>${DB.getEmoji(p.category)}</span>'">`
+    : `<span class="cart-item-emoji">${DB.getEmoji(p.category)}</span>`;
+  return `
+    <div class="cart-item">
+      ${img}
+      <div class="cart-item-info">
+        <div class="cart-item-name">${p.name}</div>
+        <div class="cart-item-unit">฿${fmt(p.price)} / ชิ้น</div>
+      </div>
+      <div class="qty-controls">
+        <button class="qty-btn minus" onclick="changeQty('${p.id}',-1)">−</button>
+        <span class="qty-num">${qty}</span>
+        <button class="qty-btn plus"  onclick="changeQty('${p.id}', 1)">+</button>
+      </div>
+      <span class="cart-item-total">฿${fmt(p.price * qty)}</span>
+    </div>`;
+}
+
 /* ---- Cart ---- */
 function addToCart(productId) {
   const product = allProducts.find(p => p.id === productId);
@@ -187,7 +236,7 @@ function changeQty(productId, delta) {
     item.qty = item.product.quantity;
     showToast(`สินค้าคงเหลือเพียง ${item.product.quantity} ชิ้น`, 'warning');
   }
-  saveCart();
+  if (cart.length > 0) saveCart();
   renderCart();
 }
 
@@ -208,10 +257,12 @@ function toggleDiscountType() {
   document.getElementById('disc-type-btn').textContent = discountType;
   applyDiscount();
 }
+let _saveCartTimer = null;
 function applyDiscount() {
   discountValue = parseFloat(document.getElementById('disc-value')?.value) || 0;
-  saveCart();
   renderCartFooter();
+  clearTimeout(_saveCartTimer);
+  _saveCartTimer = setTimeout(saveCart, 400);
 }
 function renderCartFooter() {
   const sub  = getSubtotal();
@@ -233,14 +284,12 @@ function renderCartFooter() {
   if (mbar) {
     const qty = cart.reduce((s, i) => s + i.qty, 0);
     if (qty > 0) {
-      mbar.style.display = '';
       mbar.classList.remove('hidden');
       const mcbCount = document.getElementById('mcb-count');
       const mcbTotal = document.getElementById('mcb-total');
       if (mcbCount) mcbCount.textContent = qty;
       if (mcbTotal) mcbTotal.textContent = `฿${fmt(total)}`;
     } else {
-      mbar.style.display = 'none';
       mbar.classList.add('hidden');
     }
   }
@@ -258,22 +307,17 @@ function renderCartFooter() {
 }
 
 function renderCart() {
-  const itemsEl   = document.getElementById('cart-items');
-  const countEl   = document.getElementById('cart-count');
+  const itemsEl = document.getElementById('cart-items');
+  const countEl = document.getElementById('cart-count');
 
-  const totalQty  = cart.reduce((s, i) => s + i.qty, 0);
-  countEl.textContent = totalQty;
+  countEl.textContent = cart.reduce((s, i) => s + i.qty, 0);
   renderCartFooter();
 
-  if (cart.length === 0) {
-    /* auto-close sheet and clear bar the moment cart empties */
-    closeCartSheet();
-    clearSavedCart();
-  } else if (document.getElementById('cart-sheet')?.classList.contains('open')) {
-    renderCartSheet();
-  }
+  _broadcastCart();
 
   if (cart.length === 0) {
+    closeCartSheet();
+    clearSavedCart();
     itemsEl.innerHTML = `
       <div class="cart-empty">
         <div class="empty-icon">🛒</div>
@@ -283,24 +327,11 @@ function renderCart() {
     return;
   }
 
-  itemsEl.innerHTML = cart.map(({ product: p, qty }) => `
-    <div class="cart-item">
-      ${p.image
-        ? `<img src="${p.image}" alt="${p.name}" class="cart-item-img"
-               onerror="this.outerHTML='<span class=\\'cart-item-emoji\\'>${DB.getEmoji(p.category)}</span>'">`
-        : `<span class="cart-item-emoji">${DB.getEmoji(p.category)}</span>`
-      }
-      <div class="cart-item-info">
-        <div class="cart-item-name">${p.name}</div>
-        <div class="cart-item-unit">฿${fmt(p.price)} / ชิ้น</div>
-      </div>
-      <div class="qty-controls">
-        <button class="qty-btn minus" onclick="changeQty('${p.id}', -1)">−</button>
-        <span class="qty-num">${qty}</span>
-        <button class="qty-btn plus"  onclick="changeQty('${p.id}',  1)">+</button>
-      </div>
-      <span class="cart-item-total">฿${fmt(p.price * qty)}</span>
-    </div>`).join('');
+  if (document.getElementById('cart-sheet')?.classList.contains('open')) {
+    renderCartSheet();
+  }
+
+  itemsEl.innerHTML = cart.map(({ product: p, qty }) => cartItemHTML(p, qty)).join('');
 }
 
 /* ---- Cart bottom sheet (mobile) ---- */
@@ -324,24 +355,7 @@ function renderCartSheet() {
   if (cart.length === 0) {
     bodyEl.innerHTML = `<div class="cart-empty"><div class="empty-icon">🛒</div><p>ยังไม่มีสินค้าในตะกร้า</p></div>`;
   } else {
-    bodyEl.innerHTML = cart.map(({ product: p, qty }) => `
-      <div class="cart-item">
-        ${p.image
-          ? `<img src="${p.image}" alt="${p.name}" class="cart-item-img"
-                 onerror="this.outerHTML='<span class=\\'cart-item-emoji\\'>${DB.getEmoji(p.category)}</span>'">`
-          : `<span class="cart-item-emoji">${DB.getEmoji(p.category)}</span>`
-        }
-        <div class="cart-item-info">
-          <div class="cart-item-name">${p.name}</div>
-          <div class="cart-item-unit">฿${fmt(p.price)} / ชิ้น</div>
-        </div>
-        <div class="qty-controls">
-          <button class="qty-btn minus" onclick="changeQty('${p.id}',-1)">−</button>
-          <span class="qty-num">${qty}</span>
-          <button class="qty-btn plus"  onclick="changeQty('${p.id}', 1)">+</button>
-        </div>
-        <span class="cart-item-total">฿${fmt(p.price * qty)}</span>
-      </div>`).join('');
+    bodyEl.innerHTML = cart.map(({ product: p, qty }) => cartItemHTML(p, qty)).join('');
   }
 
   /* footer totals */
@@ -477,10 +491,23 @@ function confirmPayment() {
     Printer.openDrawer().catch(() => {});
   }
 
+  /* broadcast payment-done to customer display */
+  if (_displayChannel) {
+    const settings = DB.getSettings();
+    _displayChannel.postMessage({
+      type: 'payment_done',
+      shopName: settings.shopName || 'ร้านขายของชำ',
+      total,
+      change: currentPayMethod === 'cash' ? change : 0,
+      footer: settings.footer || 'ขอบคุณที่ใช้บริการ',
+    });
+  }
+
   showReceipt(saleItems, total, cash, change, meta);
   allProducts = DB.getProducts();
   renderCart();
   renderProducts();
+  renderDashboard();
   if (typeof updateInventoryBadge === 'function') updateInventoryBadge();
   closeModal('modal-payment');
 }
@@ -657,15 +684,15 @@ function updateShiftUI() {
 let _salesChart = null;
 
 function renderDashboard() {
-  renderSalesChart();
-  renderTopProducts();
+  const sales = DB.getSales();
+  renderSalesChart(sales);
+  renderTopProducts(sales);
 }
 
-function renderSalesChart() {
+function renderSalesChart(sales) {
   const canvas = document.getElementById('chart-sales-7d');
   if (!canvas || typeof Chart === 'undefined') return;
 
-  const sales  = DB.getSales();
   const labels = [];
   const values = [];
   for (let i = 6; i >= 0; i--) {
@@ -677,7 +704,12 @@ function renderSalesChart() {
       .reduce((sum, s) => sum + s.total, 0));
   }
 
-  if (_salesChart) { _salesChart.destroy(); _salesChart = null; }
+  if (_salesChart) {
+    _salesChart.data.labels = labels;
+    _salesChart.data.datasets[0].data = values;
+    _salesChart.update('none');
+    return;
+  }
 
   _salesChart = new Chart(canvas, {
     type: 'bar',
@@ -710,12 +742,12 @@ function renderSalesChart() {
   });
 }
 
-function renderTopProducts() {
+function renderTopProducts(sales) {
   const el = document.getElementById('top5-list');
   if (!el) return;
 
   const DAY30 = Date.now() - 30 * 86400000;
-  const sales = DB.getSales().filter(s => new Date(s.createdAt).getTime() >= DAY30);
+  sales = sales.filter(s => new Date(s.createdAt).getTime() >= DAY30);
 
   const counts = {};
   sales.forEach(s => s.items.forEach(i => {
@@ -753,6 +785,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderDashboard();
   Printer.refreshUI();
   updateShiftUI();
+  _openDisplayChannel();
   /* update brand name from settings */
   const bn = document.getElementById('brand-name');
   if (bn) bn.textContent = DB.getSettings().shopName || 'ร้านขายของชำ';

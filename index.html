@@ -57,6 +57,10 @@
           <span class="sl-label" id="shift-link-text">เปิด/ปิดกะ</span>
           <span id="shift-indicator" class="hw-dot"></span>
         </a>
+        <a href="#" class="sidebar-link" onclick="openCustomerDisplay();return false">
+          <span class="sl-icon">🖥️</span>
+          <span class="sl-label">จอลูกค้า</span>
+        </a>
       </nav>
       <div class="sidebar-footer">
         <span id="clock" class="sidebar-clock"></span>
@@ -152,7 +156,7 @@
       </div>
 
       <!-- Mobile cart bar — visible only on small screens, hidden when cart is empty -->
-      <div class="mobile-cart-bar hidden" id="mobile-cart-bar" style="display:none">
+      <div class="mobile-cart-bar hidden" id="mobile-cart-bar">
         <div class="mcb-left" onclick="openCartSheet()" role="button" style="cursor:pointer;padding:4px 0">
           <span class="mcb-count" id="mcb-count">0</span>
           <span class="mcb-label">รายการ ›</span>

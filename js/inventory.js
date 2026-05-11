@@ -8,24 +8,6 @@ let adjustId    = null;
 let invSearch   = '';
 let invCategory = 'ทั้งหมด';
 
-/* ---- Helpers ---- */
-function fmt(n) {
-  return Number(n).toLocaleString('th-TH', { minimumFractionDigits: 2 });
-}
-
-function showToast(msg, type = 'success') {
-  const c = document.getElementById('toast-container');
-  const el = document.createElement('div');
-  const icons = { success: '✅', error: '❌', warning: '⚠️' };
-  el.className = `toast ${type}`;
-  el.innerHTML = `<span class="toast-icon">${icons[type] || '✅'}</span><span class="toast-msg">${msg}</span>`;
-  c.appendChild(el);
-  setTimeout(() => {
-    el.classList.add('hiding');
-    setTimeout(() => el.remove(), 280);
-  }, 2800);
-}
-
 /* ---- Stats ---- */
 function renderStats() {
   const s = DB.getStats();
@@ -203,22 +185,24 @@ function saveProduct() {
 }
 
 /* ---- Image upload ---- */
+function resizeImageCanvas(source, MAX = 300) {
+  let w = source.videoWidth ?? source.naturalWidth ?? source.width;
+  let h = source.videoHeight ?? source.naturalHeight ?? source.height;
+  if (w > h) { if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; } }
+  else       { if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; } }
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  canvas.getContext('2d').drawImage(source, 0, 0, w, h);
+  return canvas.toDataURL('image/jpeg', 0.82);
+}
+
 function handleImageUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
   const reader = new FileReader();
   reader.onload = evt => {
     const img = new Image();
-    img.onload = () => {
-      const MAX = 300;
-      let { width: w, height: h } = img;
-      if (w > h) { if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; } }
-      else       { if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; } }
-      const canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      updateImagePreview(canvas.toDataURL('image/jpeg', 0.82));
-    };
+    img.onload = () => updateImagePreview(resizeImageCanvas(img));
     img.src = evt.target.result;
   };
   reader.readAsDataURL(file);
@@ -259,15 +243,8 @@ function openPhotoCamera() {
 }
 
 function capturePhoto() {
-  const video  = document.getElementById('photo-video');
-  const canvas = document.getElementById('photo-canvas');
-  const MAX = 300;
-  let w = video.videoWidth, h = video.videoHeight;
-  if (w > h) { if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; } }
-  else       { if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; } }
-  canvas.width = w; canvas.height = h;
-  canvas.getContext('2d').drawImage(video, 0, 0, w, h);
-  updateImagePreview(canvas.toDataURL('image/jpeg', 0.82));
+  const video = document.getElementById('photo-video');
+  updateImagePreview(resizeImageCanvas(video));
   closePhotoCamera();
 }
 

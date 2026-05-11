@@ -2,17 +2,6 @@
    settings.js — Settings page logic
    ============================================================ */
 
-function showToast(msg, type = 'success') {
-  const c = document.getElementById('toast-container');
-  if (!c) return;
-  const el = document.createElement('div');
-  const icons = { success: '✅', error: '❌', warning: '⚠️' };
-  el.className = `toast ${type}`;
-  el.innerHTML = `<span class="toast-icon">${icons[type] || '✅'}</span><span class="toast-msg">${msg}</span>`;
-  c.appendChild(el);
-  setTimeout(() => { el.classList.add('hiding'); setTimeout(() => el.remove(), 280); }, 2800);
-}
-
 /* ---- Load saved values into form ---- */
 function loadSettings() {
   const s = DB.getSettings();

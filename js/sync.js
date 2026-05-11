@@ -133,6 +133,7 @@ const Sync = (() => {
       localStorage.setItem('grocery_shifts',       JSON.stringify(shSnap.docs.map(d => d.data())));
     if (!aSnap.empty)
       localStorage.setItem('grocery_adjustments',  JSON.stringify(aSnap.docs.map(d => d.data())));
+    DB.invalidateCache?.();
     _refreshUI();
   }
 
@@ -141,6 +142,8 @@ const Sync = (() => {
     /* Products */
     col('products').onSnapshot({ includeMetadataChanges: false }, snap => {
       localStorage.setItem('grocery_products', JSON.stringify(snap.docs.map(d => d.data())));
+      DB.invalidateCache?.();
+      if (typeof allProducts !== 'undefined') allProducts = DB.getProducts();
       if (typeof renderTable         === 'function') renderTable();
       if (typeof renderStats         === 'function') renderStats();
       if (typeof renderProducts      === 'function') renderProducts();
@@ -151,6 +154,7 @@ const Sync = (() => {
     /* Sales */
     col('sales').onSnapshot({ includeMetadataChanges: false }, snap => {
       localStorage.setItem('grocery_sales', JSON.stringify(snap.docs.map(d => d.data())));
+      DB.invalidateCache?.();
       if (typeof renderSalesList === 'function') renderSalesList();
       if (typeof renderStats     === 'function') renderStats();
       _setSyncDot('synced');

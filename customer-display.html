@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customer Display</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --green:       #16a34a;
+      --green-dark:  #14532d;
+      --green-light: #bbf7d0;
+      --green-pale:  #f0fdf4;
+      --text:        #f8fafc;
+      --text-dim:    #94a3b8;
+      --bg:          #0f172a;
+      --surface:     #1e293b;
+      --border:      #334155;
+      --danger:      #f87171;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      font-family: 'Sarabun', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      overflow: hidden;
+    }
+
+    /* ── Layout ─────────────────────────────── */
+    .cd-shell {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    /* ── Header ─────────────────────────────── */
+    .cd-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 36px;
+      background: var(--green-dark);
+      border-bottom: 2px solid var(--green);
+      flex-shrink: 0;
+    }
+
+    .cd-shop-name {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .cd-shop-icon {
+      font-size: 1.8rem;
+    }
+
+    .cd-clock {
+      font-size: 1.6rem;
+      font-weight: 600;
+      color: var(--green-light);
+      letter-spacing: 0.04em;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ── Body ────────────────────────────────── */
+    .cd-body {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* ── Idle screen ─────────────────────────── */
+    .idle-screen {
+      position: absolute; inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      opacity: 1;
+      transition: opacity 0.4s ease;
+    }
+
+    .idle-screen.hidden { opacity: 0; pointer-events: none; }
+
+    .idle-icon {
+      font-size: 6rem;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50%       { transform: translateY(-12px); }
+    }
+
+    .idle-welcome {
+      font-size: 2.8rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .idle-sub {
+      font-size: 1.2rem;
+      color: var(--text-dim);
+    }
+
+    /* ── Active screen ───────────────────────── */
+    .active-screen {
+      position: absolute; inset: 0;
+      display: flex;
+      flex-direction: column;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+
+    .active-screen.visible { opacity: 1; pointer-events: auto; }
+
+    /* Items table */
+    .cd-items-wrap {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 36px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    .cd-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+    }
+
+    .cd-table thead th {
+      padding: 10px 14px;
+      text-align: left;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .cd-table thead th:not(:first-child) { text-align: right; }
+
+    .cd-table tbody tr {
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      animation: rowIn 0.25s ease forwards;
+    }
+
+    @keyframes rowIn {
+      from { opacity: 0; transform: translateX(-8px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    .cd-table tbody tr:last-child { border-bottom: none; }
+
+    .cd-table tbody td {
+      padding: 14px 14px;
+      font-size: 1.05rem;
+      vertical-align: middle;
+    }
+
+    .cd-table tbody td:not(:first-child) { text-align: right; }
+
+    .td-name {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      max-width: 0;      /* stretch in table */
+    }
+
+    .td-img {
+      width: 44px; height: 44px;
+      border-radius: 8px;
+      object-fit: cover;
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+
+    .td-emoji {
+      width: 44px; height: 44px;
+      border-radius: 8px;
+      background: var(--surface);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem;
+      flex-shrink: 0;
+    }
+
+    .td-name-text { font-weight: 500; line-height: 1.3; }
+
+    .td-qty {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--green-light);
+    }
+
+    .td-price { color: var(--text-dim); font-size: 0.95rem; }
+
+    .td-line-total {
+      font-weight: 600;
+      font-size: 1.1rem;
+      color: #fff;
+    }
+
+    /* ── Footer totals ───────────────────────── */
+    .cd-footer {
+      flex-shrink: 0;
+      background: var(--surface);
+      border-top: 2px solid var(--border);
+      padding: 16px 36px;
+    }
+
+    .cd-summary {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+    }
+
+    .cd-sum-row {
+      display: flex;
+      gap: 60px;
+      font-size: 1rem;
+      color: var(--text-dim);
+    }
+
+    .cd-sum-row span:last-child { min-width: 130px; text-align: right; }
+
+    .cd-sum-row.discount span { color: var(--danger); }
+
+    .cd-total-row {
+      display: flex;
+      align-items: baseline;
+      gap: 24px;
+      margin-top: 6px;
+    }
+
+    .cd-total-label {
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: var(--text-dim);
+    }
+
+    .cd-total-amount {
+      font-size: 3.2rem;
+      font-weight: 800;
+      color: var(--green-light);
+      letter-spacing: -0.01em;
+      line-height: 1;
+      transition: all 0.3s ease;
+    }
+
+    /* ── Thank-you screen ────────────────────── */
+    .thankyou-screen {
+      position: absolute; inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      background: var(--bg);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+
+    .thankyou-screen.visible { opacity: 1; }
+
+    .ty-icon {
+      font-size: 5rem;
+      animation: popIn 0.5s cubic-bezier(0.175,0.885,0.32,1.275);
+    }
+
+    @keyframes popIn {
+      from { transform: scale(0.3); opacity: 0; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+
+    .ty-title {
+      font-size: 3.5rem;
+      font-weight: 800;
+      color: var(--green-light);
+    }
+
+    .ty-amount {
+      font-size: 2rem;
+      font-weight: 600;
+      color: var(--text-dim);
+    }
+
+    .ty-change {
+      font-size: 1.4rem;
+      color: #fff;
+      background: var(--green-dark);
+      padding: 10px 28px;
+      border-radius: 50px;
+    }
+
+    .ty-footer {
+      font-size: 1rem;
+      color: var(--text-dim);
+      margin-top: 8px;
+    }
+
+    /* ── No-connection notice ─────────────────── */
+    .no-conn {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.7);
+      color: var(--text-dim);
+      font-size: 0.85rem;
+      padding: 8px 20px;
+      border-radius: 999px;
+      backdrop-filter: blur(4px);
+      border: 1px solid var(--border);
+      display: none;
+    }
+
+    .no-conn.visible { display: block; }
+  </style>
+</head>
+<body>
+
+<div class="cd-shell">
+
+  <!-- Header -->
+  <header class="cd-header">
+    <div class="cd-shop-name">
+      <span class="cd-shop-icon">🛒</span>
+      <span id="shop-name">ร้านขายของชำ</span>
+    </div>
+    <div class="cd-clock" id="cd-clock"></div>
+  </header>
+
+  <!-- Body -->
+  <div class="cd-body">
+
+    <!-- Idle -->
+    <div class="idle-screen" id="idle-screen">
+      <div class="idle-icon">🛍️</div>
+      <div class="idle-welcome">ยินดีต้อนรับ</div>
+      <div class="idle-sub">กรุณารอสักครู่ พนักงานกำลังให้บริการ</div>
+    </div>
+
+    <!-- Active -->
+    <div class="active-screen" id="active-screen">
+      <div class="cd-items-wrap">
+        <table class="cd-table">
+          <thead>
+            <tr>
+              <th style="width:100%">รายการสินค้า</th>
+              <th style="white-space:nowrap">จำนวน</th>
+              <th style="white-space:nowrap">ราคา/ชิ้น</th>
+              <th style="white-space:nowrap">รวม</th>
+            </tr>
+          </thead>
+          <tbody id="cd-tbody"></tbody>
+        </table>
+      </div>
+
+      <div class="cd-footer">
+        <div class="cd-summary">
+          <div class="cd-sum-row" id="cd-row-sub" style="display:none">
+            <span>ราคาก่อนลด</span>
+            <span id="cd-subtotal"></span>
+          </div>
+          <div class="cd-sum-row discount" id="cd-row-disc" style="display:none">
+            <span id="cd-disc-label">ส่วนลด</span>
+            <span id="cd-disc-amt"></span>
+          </div>
+          <div class="cd-total-row">
+            <span class="cd-total-label">ยอดที่ต้องชำระ</span>
+            <span class="cd-total-amount" id="cd-total">฿0.00</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Thank you -->
+    <div class="thankyou-screen" id="thankyou-screen">
+      <div class="ty-icon">✅</div>
+      <div class="ty-title">ขอบคุณ!</div>
+      <div class="ty-amount" id="ty-total"></div>
+      <div class="ty-change" id="ty-change" style="display:none"></div>
+      <div class="ty-footer" id="ty-footer">ขอบคุณที่ใช้บริการ</div>
+    </div>
+
+  </div><!-- /cd-body -->
+
+</div><!-- /cd-shell -->
+
+<div class="no-conn" id="no-conn">⚠️ รอรับสัญญาณจากเครื่องเก็บเงิน…</div>
+
+<script>
+/* ── Helpers ──────────────────────────────────── */
+function fmt(n) {
+  return Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 });
+}
+
+/* ── Clock ────────────────────────────────────── */
+function tick() {
+  document.getElementById('cd-clock').textContent =
+    new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+setInterval(tick, 1000);
+tick();
+
+/* ── State ────────────────────────────────────── */
+let _thankyouTimer = null;
+
+/* ── Screens ──────────────────────────────────── */
+function showIdle() {
+  document.getElementById('idle-screen').classList.remove('hidden');
+  document.getElementById('active-screen').classList.remove('visible');
+  document.getElementById('thankyou-screen').classList.remove('visible');
+}
+
+function showActive() {
+  document.getElementById('idle-screen').classList.add('hidden');
+  document.getElementById('active-screen').classList.add('visible');
+  document.getElementById('thankyou-screen').classList.remove('visible');
+}
+
+function showThankyou(total, change, footer) {
+  clearTimeout(_thankyouTimer);
+  document.getElementById('idle-screen').classList.add('hidden');
+  document.getElementById('active-screen').classList.remove('visible');
+  const ty = document.getElementById('thankyou-screen');
+  ty.classList.add('visible');
+
+  document.getElementById('ty-total').textContent = `ยอดชำระ ฿${fmt(total)}`;
+
+  const changeEl = document.getElementById('ty-change');
+  if (change > 0) {
+    changeEl.textContent = `เงินทอน ฿${fmt(change)}`;
+    changeEl.style.display = '';
+  } else {
+    changeEl.style.display = 'none';
+  }
+
+  document.getElementById('ty-footer').textContent = footer || 'ขอบคุณที่ใช้บริการ';
+
+  _thankyouTimer = setTimeout(showIdle, 6000);
+}
+
+/* ── Cart render ──────────────────────────────── */
+const EMOJI_MAP = {
+  'เครื่องปรุง': '🧂', 'ข้าว': '🍚', 'น้ำมัน': '🫙', 'นม': '🥛',
+  'ไข่': '🥚', 'บะหมี่': '🍜', 'เครื่องดื่ม': '🥤', 'ผัก': '🥦',
+  'ผลไม้': '🍎', 'ขนม': '🍬', 'ของใช้': '🧴', 'อื่นๆ': '📦',
+};
+
+function getEmoji(category) {
+  return EMOJI_MAP[category] || '📦';
+}
+
+function renderCart(data) {
+  clearTimeout(_thankyouTimer);
+
+  if (!data.cart || data.cart.length === 0) {
+    showIdle();
+    return;
+  }
+
+  showActive();
+
+  const tbody = document.getElementById('cd-tbody');
+  tbody.innerHTML = data.cart.map(item => {
+    const thumb = item.image
+      ? `<img src="${item.image}" class="td-img" alt="${item.name}"
+             onerror="this.outerHTML='<div class=\\'td-emoji\\'>${getEmoji(item.category)}</div>'">`
+      : `<div class="td-emoji">${getEmoji(item.category)}</div>`;
+    return `
+      <tr>
+        <td><div class="td-name">${thumb}<span class="td-name-text">${item.name}</span></div></td>
+        <td class="td-qty">×${item.qty}</td>
+        <td class="td-price">฿${fmt(item.price)}</td>
+        <td class="td-line-total">฿${fmt(item.lineTotal)}</td>
+      </tr>`;
+  }).join('');
+
+  document.getElementById('cd-total').textContent = `฿${fmt(data.total)}`;
+
+  const rowSub  = document.getElementById('cd-row-sub');
+  const rowDisc = document.getElementById('cd-row-disc');
+
+  if (data.discountAmt > 0) {
+    document.getElementById('cd-subtotal').textContent   = `฿${fmt(data.subtotal)}`;
+    document.getElementById('cd-disc-amt').textContent   = `−฿${fmt(data.discountAmt)}`;
+    document.getElementById('cd-disc-label').textContent = data.discountLabel || 'ส่วนลด';
+    rowSub.style.display  = '';
+    rowDisc.style.display = '';
+  } else {
+    rowSub.style.display  = 'none';
+    rowDisc.style.display = 'none';
+  }
+}
+
+/* ── BroadcastChannel ─────────────────────────── */
+let channel;
+
+function connect() {
+  try {
+    channel = new BroadcastChannel('pos_customer_display');
+    channel.onmessage = e => {
+      const msg = e.data;
+      document.getElementById('no-conn').classList.remove('visible');
+
+      if (msg.shopName)
+        document.getElementById('shop-name').textContent = msg.shopName;
+
+      if (msg.type === 'cart_update') {
+        renderCart(msg);
+      } else if (msg.type === 'payment_done') {
+        showThankyou(msg.total, msg.change, msg.footer);
+      } else if (msg.type === 'cart_clear') {
+        showIdle();
+      } else if (msg.type === 'ping') {
+        /* respond so POS knows we're open */
+        channel.postMessage({ type: 'pong' });
+      }
+    };
+    /* Request a state refresh from the POS */
+    channel.postMessage({ type: 'request_state' });
+  } catch {
+    document.getElementById('no-conn').classList.add('visible');
+  }
+}
+
+connect();
+
+/* Show the no-conn notice if we haven't heard anything in 8 s */
+setTimeout(() => {
+  if (document.getElementById('idle-screen').offsetParent !== null) {
+    document.getElementById('no-conn').classList.add('visible');
+    setTimeout(() => document.getElementById('no-conn').classList.remove('visible'), 5000);
+  }
+}, 8000);
+</script>
+
+</body>
+</html>

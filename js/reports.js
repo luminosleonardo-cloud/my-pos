@@ -5,23 +5,6 @@
 let _profitChart = null;
 let currentPeriod = '7days';
 
-function fmt(n) {
-  return Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 });
-}
-
-function showToast(msg, type = 'success') {
-  const c = document.getElementById('toast-container');
-  const el = document.createElement('div');
-  const icons = { success: '✅', error: '❌', warning: '⚠️' };
-  el.className = `toast ${type}`;
-  el.innerHTML = `<span class="toast-icon">${icons[type] || '✅'}</span><span class="toast-msg">${msg}</span>`;
-  c.appendChild(el);
-  setTimeout(() => {
-    el.classList.add('hiding');
-    setTimeout(() => el.remove(), 280);
-  }, 2800);
-}
-
 /* ---- Period helpers ---- */
 function getPeriodStart(period) {
   const now   = new Date();
