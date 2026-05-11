@@ -80,7 +80,8 @@ ul { list-style: none; }
 .app-shell {
   display: flex;
   height: 100vh;
-  overflow-x: hidden; /* prevent horizontal bleed; don't use clip — breaks iOS scroll */
+  height: 100dvh; /* iOS Safari: shrinks when address bar hides */
+  overflow-x: hidden;
 }
 
 .sidebar {
@@ -192,6 +193,7 @@ ul { list-style: none; }
 .app-main {
   flex: 1;
   overflow: hidden;
+  overflow: clip; /* iOS 16+: clip without creating a scroll context */
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -213,16 +215,19 @@ ul { list-style: none; }
   overflow: hidden;
   align-items: stretch;
   container-type: inline-size;
-  min-height: 0; /* allow flex shrink so product-grid scroll container gets a bounded height */
+  min-height: 0;
 }
 
 .pos-main {
   flex: 1 1 340px;
+  height: 100%; /* definite height so overflow-y: auto can scroll */
   min-width: 0;
-  min-height: 0; /* required: lets column flex children (product-grid) get a finite height */
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto;   /* pos-main is the scroll container */
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
   padding: 16px 16px 16px 20px;
   gap: 12px;
 }
@@ -231,6 +236,10 @@ ul { list-style: none; }
    Search Row
    ============================================================ */
 .search-row {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--bg);
   display: flex;
   gap: 8px;
   align-items: center;
@@ -291,9 +300,14 @@ ul { list-style: none; }
    Category Tabs
    ============================================================ */
 .category-tabs {
+  position: sticky;
+  top: 56px; /* search-row (~44px) + gap (12px) */
+  z-index: 4;
+  background: var(--bg);
   display: flex;
   gap: 6px;
   overflow-x: auto;
+  overflow-y: hidden; /* prevent browser from forcing y:auto so mouse-wheel converts to horizontal */
   flex-shrink: 0;
   padding-bottom: 2px;
   scrollbar-width: none;
@@ -326,14 +340,11 @@ ul { list-style: none; }
    Product Grid
    ============================================================ */
 .product-grid {
-  flex: 1;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
   gap: 12px;
-  overflow-y: auto;
   padding-right: 4px;
   align-content: start;
-  -webkit-overflow-scrolling: touch;
 }
 
 .product-card {
@@ -414,6 +425,7 @@ ul { list-style: none; }
    ============================================================ */
 .pos-cart {
   flex: 0 0 clamp(260px, 30vw, 380px);
+  height: 100%;
   background: var(--card);
   border-left: 1px solid var(--border);
   display: flex;
@@ -478,6 +490,7 @@ ul { list-style: none; }
 
 .cart-items {
   flex: 1;
+  min-height: 0; /* allow flex to bound height so overflow-y: auto can scroll */
   overflow-y: auto;
   padding: 12px;
   display: flex;
@@ -1205,9 +1218,9 @@ ul { list-style: none; }
 @media (max-width: 1024px) {
 
   /* ── App shell ── */
-  .app-shell { flex-direction: column; height: 100svh; overflow: hidden; }
+  .app-shell { flex-direction: column; height: 100svh; overflow: hidden; overflow: clip; }
   /* Main scrolls the whole page */
-  .app-main  { order: 1; flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; }
+  .app-main  { order: 1; flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
 
   /* ── Bottom tab bar ── */
   .sidebar {
@@ -2344,7 +2357,7 @@ ul { list-style: none; }
   line-height: 1.6;
 }
 
-.import-preview-scroll { overflow-x: auto; margin-bottom: 12px; }
+.import-preview-scroll { overflow-x: auto; overflow-y: hidden; margin-bottom: 12px; }
 .import-preview-tbl    { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 .import-preview-tbl th {
   background: var(--bg);
@@ -2796,6 +2809,7 @@ ul { list-style: none; }
 /* Table */
 .rpt-table-wrap {
   overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .rpt-table {
