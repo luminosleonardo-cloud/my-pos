@@ -69,6 +69,23 @@
       font-variant-numeric: tabular-nums;
       flex-shrink: 0;
     }
+    .cd-close-btn {
+      background: none;
+      border: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.35);
+      border-radius: 8px;
+      width: 34px; height: 34px;
+      font-size: 1rem;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .cd-close-btn:hover {
+      background: rgba(255,255,255,0.12);
+      color: rgba(255,255,255,0.8);
+      border-color: rgba(255,255,255,0.35);
+    }
 
     /* ── Body ────────────────────────────────── */
     .cd-body { flex: 1; overflow: hidden; position: relative; }
@@ -437,6 +454,7 @@
       <span id="shop-name">ร้านขายของชำ</span>
     </div>
     <div class="cd-clock" id="cd-clock"></div>
+    <button class="cd-close-btn" onclick="closeDisplay()" title="ปิดหน้าจอลูกค้า">✕</button>
   </header>
 
   <!-- Body -->
@@ -567,6 +585,15 @@
 /* ── Helpers ──────────────────────────────────── */
 function fmt(n) {
   return Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 });
+}
+
+/* ── Close ────────────────────────────────────── */
+function closeDisplay() {
+  if (document.fullscreenElement) {
+    document.exitFullscreen().then(() => window.close());
+  } else {
+    window.close();
+  }
 }
 
 /* ── Clock ────────────────────────────────────── */
