@@ -360,6 +360,55 @@
     }
     .ty-footer { font-size: 1rem; color: var(--text-muted); }
 
+    /* ── Setup screen ────────────────────────── */
+    #setup-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 24px;
+    }
+    .setup-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 32px 28px;
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .setup-title { font-size: 1.4rem; font-weight: 700; color: var(--text); }
+    .setup-hint  { font-size: 0.88rem; color: var(--text-dim); line-height: 1.5; }
+    .setup-label { font-size: 0.82rem; color: var(--text-muted); font-weight: 600; }
+    .setup-input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 10px 14px;
+      font-size: 0.9rem;
+      font-family: monospace;
+      resize: vertical;
+      outline: none;
+    }
+    .setup-input:focus { border-color: var(--green); }
+    .setup-btn {
+      padding: 12px;
+      border-radius: 10px;
+      border: none;
+      background: var(--green);
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .setup-btn:hover { background: #15803d; }
+    .setup-err { font-size: 0.82rem; color: #fb7185; min-height: 18px; }
+
     /* ── No-connection ────────────────────────── */
     .no-conn {
       position: fixed;
@@ -406,6 +455,39 @@
         <div class="idle-dot"></div>
         <div class="idle-dot"></div>
         <div class="idle-dot"></div>
+      </div>
+      <button onclick="activate('setup-screen')"
+              style="margin-top:16px;background:none;border:1px solid rgba(255,255,255,0.12);
+                     color:rgba(255,255,255,0.3);padding:6px 18px;border-radius:999px;
+                     font-size:0.75rem;cursor:pointer;font-family:inherit">
+        🔗 ตั้งค่าการเชื่อมต่อ
+      </button>
+    </div>
+
+    <!-- Setup -->
+    <div class="screen" id="setup-screen">
+      <div class="setup-box">
+        <div class="setup-title">🔗 เชื่อมต่ออุปกรณ์นี้</div>
+        <div class="setup-hint">
+          ป้อน Shop ID และ Firebase Config จากหน้า <strong>ตั้งค่าร้าน</strong> บนเครื่อง POS
+          หรือสแกน QR จากปุ่ม "จอลูกค้า" ในเครื่อง POS
+        </div>
+        <div>
+          <div class="setup-label">Shop ID</div>
+          <input id="setup-shop-id" class="setup-input" type="text" placeholder="เช่น ABC123" autocomplete="off">
+        </div>
+        <div>
+          <div class="setup-label">Firebase Config (JSON)</div>
+          <textarea id="setup-config" class="setup-input" rows="4"
+            placeholder='{"apiKey":"…","authDomain":"…","projectId":"…","storageBucket":"…","messagingSenderId":"…","appId":"…"}'></textarea>
+        </div>
+        <div class="setup-err" id="setup-err"></div>
+        <button class="setup-btn" onclick="setupConnect()">เชื่อมต่อ</button>
+        <button onclick="activate('idle-screen')"
+                style="background:none;border:none;color:var(--text-muted);font-size:0.85rem;
+                       cursor:pointer;font-family:inherit;padding:4px">
+          ← กลับ
+        </button>
       </div>
     </div>
 
@@ -478,6 +560,8 @@
 <div class="no-conn" id="no-conn">⚠️ รอรับสัญญาณจากเครื่องเก็บเงิน…</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="js/promptpay.js"></script>
 <script>
 /* ── Helpers ──────────────────────────────────── */
@@ -594,32 +678,97 @@ function hideQR() {
   document.getElementById('cd-summary-panel').style.display = '';
 }
 
-/* ── BroadcastChannel ─────────────────────────── */
-let channel;
+/* ── Message handler (shared by both transports) ─ */
+function handleMsg(msg) {
+  document.getElementById('no-conn').classList.remove('visible');
+  if (msg.shopName) document.getElementById('shop-name').textContent = msg.shopName;
+  if      (msg.type === 'cart_update')  renderCart(msg);
+  else if (msg.type === 'qr_show')      showQR(msg.promptpay, msg.total);
+  else if (msg.type === 'payment_done') showThankyou(msg.total, msg.change, msg.footer);
+  else if (msg.type === 'cart_clear')   showIdle();
+}
 
-function connect() {
+/* ── BroadcastChannel (same device) ──────────────  */
+let _bc = null;
+function connectBroadcast() {
   try {
-    channel = new BroadcastChannel('pos_customer_display');
-    channel.onmessage = e => {
+    _bc = new BroadcastChannel('pos_customer_display');
+    _bc.onmessage = e => {
       const msg = e.data;
-      document.getElementById('no-conn').classList.remove('visible');
-
-      if (msg.shopName)
-        document.getElementById('shop-name').textContent = msg.shopName;
-
-      if      (msg.type === 'cart_update')   renderCart(msg);
-      else if (msg.type === 'qr_show')       showQR(msg.promptpay, msg.total);
-      else if (msg.type === 'payment_done')  showThankyou(msg.total, msg.change, msg.footer);
-      else if (msg.type === 'cart_clear')    showIdle();
-      else if (msg.type === 'ping')          channel.postMessage({ type: 'pong' });
+      if (msg.type === 'ping') { _bc.postMessage({ type: 'pong' }); return; }
+      handleMsg(msg);
     };
-    channel.postMessage({ type: 'request_state' });
+    _bc.postMessage({ type: 'request_state' });
   } catch {
     document.getElementById('no-conn').classList.add('visible');
   }
 }
 
-connect();
+/* ── Firebase (cross-device) ─────────────────────  */
+const DISPLAY_CFG_KEY = 'pos_display_cfg';
+let _fsUnsub = null;
+
+function loadDisplayConfig() {
+  /* Check URL hash: #SHOPID|base64config  (from pairing QR) */
+  const hash = location.hash.slice(1);
+  if (hash.includes('|')) {
+    const sep    = hash.indexOf('|');
+    const shopId = hash.slice(0, sep);
+    const b64    = hash.slice(sep + 1);
+    try {
+      const configJson = atob(b64);
+      JSON.parse(configJson); /* validate */
+      const stored = { shopId, configJson };
+      localStorage.setItem(DISPLAY_CFG_KEY, JSON.stringify(stored));
+      history.replaceState(null, '', location.pathname + location.search);
+      return stored;
+    } catch {}
+  }
+  try { return JSON.parse(localStorage.getItem(DISPLAY_CFG_KEY)); } catch { return null; }
+}
+
+function connectFirebase(shopId, configJson) {
+  try {
+    const config = JSON.parse(configJson);
+    let app;
+    try   { app = firebase.app('display'); }
+    catch { app = firebase.initializeApp(config, 'display'); }
+    const db = firebase.firestore(app);
+
+    if (_fsUnsub) { _fsUnsub(); _fsUnsub = null; }
+
+    const connectTime = Date.now();
+    _fsUnsub = db.doc(`shops/${shopId}/display/state`).onSnapshot(snap => {
+      if (!snap.exists) return;
+      const msg = snap.data();
+      /* ignore messages written before we connected (stale state) */
+      if ((msg.ts || 0) < connectTime - 5000) return;
+      handleMsg(msg);
+    });
+
+    /* Return to idle if we were on the setup screen */
+    if (document.getElementById('setup-screen').classList.contains('active')) activate('idle-screen');
+    document.getElementById('setup-err').textContent = '';
+  } catch (e) {
+    document.getElementById('setup-err').textContent = 'เชื่อมต่อไม่สำเร็จ: ' + e.message;
+  }
+}
+
+function setupConnect() {
+  const shopId     = document.getElementById('setup-shop-id').value.trim().toUpperCase();
+  const configJson = document.getElementById('setup-config').value.trim();
+  const errEl      = document.getElementById('setup-err');
+  errEl.textContent = '';
+  if (!shopId)     { errEl.textContent = 'กรุณาระบุ Shop ID'; return; }
+  try { JSON.parse(configJson); } catch { errEl.textContent = 'Firebase Config ไม่ใช่ JSON ที่ถูกต้อง'; return; }
+  localStorage.setItem(DISPLAY_CFG_KEY, JSON.stringify({ shopId, configJson }));
+  connectFirebase(shopId, configJson);
+}
+
+/* ── Init both transports ────────────────────────  */
+connectBroadcast();
+const _cfg = loadDisplayConfig();
+if (_cfg?.shopId && _cfg?.configJson) connectFirebase(_cfg.shopId, _cfg.configJson);
 
 /* Start on idle screen immediately (no transition flash) */
 document.addEventListener('DOMContentLoaded', () => {

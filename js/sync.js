@@ -288,5 +288,24 @@ const Sync = (() => {
 
   function isActive() { return _db !== null; }
 
-  return { init, getShopId, setShopId, getConfig, isActive, pushToCloud, pullFromCloud };
+  /* ---- Customer display: write current state to Firestore ---- */
+  function writeDisplay(msg) {
+    if (!_db || !_shopId) return;
+    docRef('display/state').set({ ...msg, ts: Date.now() }).catch(() => {});
+  }
+
+  /* ---- Customer display: subscribe to state changes ---- */
+  function subscribeDisplay(callback) {
+    if (!_db || !_shopId) return null;
+    return docRef('display/state').onSnapshot({ includeMetadataChanges: false }, snap => {
+      if (snap.exists) callback(snap.data());
+    });
+  }
+
+  function getDb()     { return _db; }
+  function getShopIdValue() { return _shopId; }
+
+  return { init, getShopId, setShopId, getConfig, isActive,
+           pushToCloud, pullFromCloud, writeDisplay, subscribeDisplay,
+           getDb, getShopIdValue };
 })();

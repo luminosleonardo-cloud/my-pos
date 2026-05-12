@@ -24,10 +24,14 @@ function _openDisplayChannel() {
   } catch { _displayChannel = null; }
 }
 
+function _sendDisplay(msg) {
+  if (_displayChannel) _displayChannel.postMessage(msg);
+  if (typeof Sync !== 'undefined' && Sync.isActive()) Sync.writeDisplay(msg);
+}
+
 function _broadcastCart() {
-  if (!_displayChannel) return;
   const settings = DB.getSettings();
-  _displayChannel.postMessage({
+  _sendDisplay({
     type: 'cart_update',
     shopName: settings.shopName || 'ร้านขายของชำ',
     cart: cart.map(i => ({
@@ -465,14 +469,12 @@ function switchPayMethod(method) {
     PromptPay.render(document.getElementById('qr-canvas-wrap'), s.promptpay, total);
     document.getElementById('qr-promptpay-no').textContent = s.promptpay || '—';
     document.getElementById('btn-confirm-pay').disabled = !s.promptpay;
-    if (_displayChannel) {
-      _displayChannel.postMessage({
-        type: 'qr_show',
-        shopName: s.shopName || 'ร้านขายของชำ',
-        promptpay: s.promptpay,
-        total,
-      });
-    }
+    _sendDisplay({
+      type: 'qr_show',
+      shopName: s.shopName || 'ร้านขายของชำ',
+      promptpay: s.promptpay,
+      total,
+    });
   } else {
     updateChange();
     _broadcastCart();
@@ -552,9 +554,9 @@ function confirmPayment() {
   }
 
   /* broadcast payment-done to customer display */
-  if (_displayChannel) {
+  {
     const settings = DB.getSettings();
-    _displayChannel.postMessage({
+    _sendDisplay({
       type: 'payment_done',
       shopName: settings.shopName || 'ร้านขายของชำ',
       total,
@@ -833,6 +835,36 @@ function renderTopProducts(sales) {
       </div>
       <span class="top5-qty">${qty} ชิ้น</span>
     </div>`).join('');
+}
+
+/* ---- Customer display menu ---- */
+function openCustomerDisplayMenu() {
+  const hasFb = typeof Sync !== 'undefined' && Sync.isActive();
+  const el = document.getElementById('cd-pair-firebase-section');
+  if (el) el.style.display = hasFb ? '' : 'none';
+  if (hasFb) _renderPairQR();
+  openModal('modal-cd-menu');
+}
+
+function openCustomerDisplayLocal() {
+  closeModal('modal-cd-menu');
+  openCustomerDisplay();
+}
+
+function _renderPairQR() {
+  const shopId = Sync.getShopId();
+  const cfg    = Sync.getConfig();
+  if (!shopId || !cfg) return;
+  const hash    = `${shopId}|${btoa(JSON.stringify(cfg))}`;
+  const baseUrl = location.href.replace(/[^/]*$/, '');
+  const url     = `${baseUrl}customer-display.html#${hash}`;
+  document.getElementById('cd-pair-url').textContent = url;
+  const wrap = document.getElementById('cd-pair-qr');
+  wrap.innerHTML = '';
+  try {
+    new QRCode(wrap, { text: url, width: 200, height: 200,
+      colorDark: '#000', colorLight: '#fff', correctLevel: QRCode.CorrectLevel.M });
+  } catch {}
 }
 
 /* ---- Init ---- */

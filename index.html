@@ -62,7 +62,7 @@
           <span class="sl-label" id="shift-link-text">เปิด/ปิดกะ</span>
           <span id="shift-indicator" class="hw-dot"></span>
         </a>
-        <a href="#" class="sidebar-link" onclick="openCustomerDisplay();return false">
+        <a href="#" class="sidebar-link" onclick="openCustomerDisplayMenu();return false">
           <span class="sl-icon">🖥️</span>
           <span class="sl-label">จอลูกค้า</span>
         </a>
@@ -479,6 +479,44 @@
       <div id="shift-summary-content" class="modal-body"></div>
       <div class="modal-footer">
         <button class="btn btn-primary" onclick="closeModal('modal-shift-summary')">ปิด</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL: Customer Display Menu ========== -->
+  <div id="modal-cd-menu" class="modal-backdrop">
+    <div class="modal" style="max-width:440px">
+      <div class="modal-header">
+        <span class="modal-title">🖥️ จอลูกค้า</span>
+        <button class="modal-close" onclick="closeModal('modal-cd-menu')">✕</button>
+      </div>
+      <div class="modal-body" style="display:flex;flex-direction:column;gap:16px">
+
+        <!-- Same device -->
+        <button class="btn btn-primary btn-lg" style="width:100%" onclick="openCustomerDisplayLocal()">
+          🖥️ เปิดในหน้าต่างใหม่ (อุปกรณ์นี้)
+        </button>
+        <p class="form-hint" style="margin-top:-10px">
+          เหมาะสำหรับแท็บเล็ตหรือคอมพิวเตอร์ที่ต่อจอที่สองผ่าน HDMI/USB-C
+        </p>
+
+        <!-- Cross-device via Firebase -->
+        <div id="cd-pair-firebase-section">
+          <div class="settings-section-title" style="font-size:0.85rem;margin-bottom:10px">
+            📱 เชื่อมต่ออุปกรณ์อื่น (ผ่าน Firebase)
+          </div>
+          <p class="form-hint" style="margin-bottom:12px">
+            สแกน QR นี้บนอุปกรณ์ที่จะใช้เป็นจอลูกค้า — เชื่อมต่อผ่าน WiFi เดียวกันหรืออินเทอร์เน็ต
+          </p>
+          <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
+            <div id="cd-pair-qr" style="background:#fff;padding:8px;border-radius:8px;flex-shrink:0"></div>
+            <div style="flex:1;min-width:160px">
+              <p class="form-hint" style="font-weight:600;margin-bottom:6px">ลิงก์เชื่อมต่อ:</p>
+              <div id="cd-pair-url" style="font-size:0.7rem;word-break:break-all;color:var(--text-muted);background:var(--bg);padding:8px;border-radius:6px;font-family:monospace;max-height:80px;overflow:auto"></div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
