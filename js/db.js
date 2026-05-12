@@ -8,6 +8,7 @@ const DB = (() => {
   const SHIFTS_KEY       = 'grocery_shifts';
   const RECEIPT_KEY      = 'grocery_receipt_no';
   const ADJUSTMENTS_KEY  = 'grocery_adjustments';
+  const WAREHOUSE_LOG_KEY = 'grocery_warehouse_log';
 
   const CATEGORY_EMOJI = {
     'เครื่องปรุง': '🧂',
@@ -55,6 +56,8 @@ const DB = (() => {
   function addProduct(data) {
     const products = getProducts();
     const now = new Date().toISOString();
+    const shelfQty = (data.shelfQty !== undefined && data.shelfQty !== null)
+      ? Math.max(0, parseInt(data.shelfQty) || 0) : null;
     const product = {
       id: generateId(),
       name: data.name || '',
@@ -66,6 +69,9 @@ const DB = (() => {
       packSize: parseInt(data.packSize) || 12,
       costPrice: parseFloat(data.costPrice) || 0,
       image: data.image || '',
+      shelfQty,
+      minShelfQty: parseInt(data.minShelfQty) || 3,
+      shelfLocation: data.shelfLocation || '',
       createdAt: now,
       updatedAt: now,
     };
@@ -78,19 +84,26 @@ const DB = (() => {
     const products = getProducts();
     const idx = products.findIndex(p => p.id === id);
     if (idx === -1) return null;
+    const ex = products[idx];
+    let shelfQty = ex.shelfQty;
+    if (data.shelfQty === null) { shelfQty = null; }
+    else if (data.shelfQty !== undefined) { shelfQty = Math.max(0, parseInt(data.shelfQty) || 0); }
     products[idx] = {
-      ...products[idx],
-      name: data.name ?? products[idx].name,
-      barcode: data.barcode ?? products[idx].barcode,
-      price: data.price !== undefined ? parseFloat(data.price) : products[idx].price,
-      quantity: data.quantity !== undefined ? parseInt(data.quantity) : products[idx].quantity,
-      category: data.category ?? products[idx].category,
+      ...ex,
+      name: data.name ?? ex.name,
+      barcode: data.barcode ?? ex.barcode,
+      price: data.price !== undefined ? parseFloat(data.price) : ex.price,
+      quantity: data.quantity !== undefined ? parseInt(data.quantity) : ex.quantity,
+      category: data.category ?? ex.category,
       lowStockThreshold: data.lowStockThreshold !== undefined
-        ? parseInt(data.lowStockThreshold) : products[idx].lowStockThreshold,
+        ? parseInt(data.lowStockThreshold) : ex.lowStockThreshold,
       packSize: data.packSize !== undefined
-        ? parseInt(data.packSize) || 12 : (products[idx].packSize || 12),
-      costPrice: data.costPrice !== undefined ? parseFloat(data.costPrice) || 0 : products[idx].costPrice,
-      image: data.image !== undefined ? data.image : products[idx].image,
+        ? parseInt(data.packSize) || 12 : (ex.packSize || 12),
+      costPrice: data.costPrice !== undefined ? parseFloat(data.costPrice) || 0 : ex.costPrice,
+      image: data.image !== undefined ? data.image : ex.image,
+      shelfQty,
+      minShelfQty: data.minShelfQty !== undefined ? parseInt(data.minShelfQty) || 3 : (ex.minShelfQty || 3),
+      shelfLocation: data.shelfLocation !== undefined ? data.shelfLocation : (ex.shelfLocation || ''),
       updatedAt: new Date().toISOString(),
     };
     saveProducts(products);
@@ -129,7 +142,11 @@ const DB = (() => {
     const products = getProducts();
     const idx = products.findIndex(p => p.id === id);
     if (idx === -1) return;
-    products[idx].quantity = Math.max(0, products[idx].quantity - qty);
+    if (products[idx].shelfQty !== null && products[idx].shelfQty !== undefined) {
+      products[idx].shelfQty = Math.max(0, products[idx].shelfQty - qty);
+    } else {
+      products[idx].quantity = Math.max(0, products[idx].quantity - qty);
+    }
     products[idx].updatedAt = new Date().toISOString();
     saveProducts(products);
   }
@@ -162,7 +179,82 @@ const DB = (() => {
     catch { return []; }
   }
 
+  /* ---------- Warehouse / Shelf ---------- */
+
+  function getWarehouseLog() {
+    try { return JSON.parse(localStorage.getItem(WAREHOUSE_LOG_KEY) || '[]'); }
+    catch { return []; }
+  }
+
+  function restockShelf(id, qty, note) {
+    const products = getProducts();
+    const idx = products.findIndex(p => p.id === id);
+    if (idx === -1) return null;
+    const p = products[idx];
+    if (p.shelfQty === null || p.shelfQty === undefined) return null;
+    const transfer = Math.min(Math.max(0, parseInt(qty) || 0), p.quantity);
+    if (transfer === 0) return null;
+    products[idx].shelfQty = (p.shelfQty || 0) + transfer;
+    products[idx].quantity  = p.quantity - transfer;
+    products[idx].updatedAt = new Date().toISOString();
+    saveProducts(products);
+    const log = getWarehouseLog();
+    log.push({
+      id: generateId(), type: 'restock_shelf',
+      productId: id, productName: p.name,
+      qty: transfer, note: note || 'เติมของขึ้นชั้น',
+      createdAt: new Date().toISOString(),
+    });
+    localStorage.setItem(WAREHOUSE_LOG_KEY, JSON.stringify(log));
+    return products[idx];
+  }
+
+  function receiveStock(id, qty, note) {
+    const products = getProducts();
+    const idx = products.findIndex(p => p.id === id);
+    if (idx === -1) return null;
+    const amount = Math.max(0, parseInt(qty) || 0);
+    if (amount === 0) return null;
+    products[idx].quantity += amount;
+    products[idx].updatedAt = new Date().toISOString();
+    saveProducts(products);
+    const log = getWarehouseLog();
+    log.push({
+      id: generateId(), type: 'receive',
+      productId: id, productName: products[idx].name,
+      qty: amount, note: note || 'รับสินค้าเข้าคลัง',
+      createdAt: new Date().toISOString(),
+    });
+    localStorage.setItem(WAREHOUSE_LOG_KEY, JSON.stringify(log));
+    return products[idx];
+  }
+
+  function getWarehouseStats() {
+    const products = getProducts();
+    const tracked = products.filter(p => p.shelfQty !== null && p.shelfQty !== undefined);
+    return {
+      totalProducts: products.length,
+      trackedProducts: tracked.length,
+      warehouseLow: products.filter(p => p.quantity > 0 && p.quantity <= p.lowStockThreshold).length,
+      warehouseOut: products.filter(p => p.quantity === 0).length,
+      shelfLow: tracked.filter(p => p.shelfQty > 0 && p.shelfQty <= (p.minShelfQty || 3)).length,
+      shelfOut: tracked.filter(p => p.shelfQty === 0).length,
+    };
+  }
+
   function getStockStatus(product) {
+    const hasShelf = product.shelfQty !== null && product.shelfQty !== undefined;
+    if (hasShelf) {
+      if (product.shelfQty === 0) return 'out';
+      if (product.shelfQty <= (product.minShelfQty || 3)) return 'shelf-low';
+      return 'normal';
+    }
+    if (product.quantity === 0) return 'out';
+    if (product.quantity <= product.lowStockThreshold) return 'low';
+    return 'normal';
+  }
+
+  function getWarehouseStatus(product) {
     if (product.quantity === 0) return 'out';
     if (product.quantity <= product.lowStockThreshold) return 'low';
     return 'normal';
@@ -217,10 +309,13 @@ const DB = (() => {
   function getStats() {
     const products = getProducts();
     const todaySales = getTodaySales();
+    const shelfTracked = products.filter(p => p.shelfQty !== null && p.shelfQty !== undefined);
     return {
       totalProducts: products.length,
       lowStock: products.filter(p => p.quantity > 0 && p.quantity <= p.lowStockThreshold).length,
       outOfStock: products.filter(p => p.quantity === 0).length,
+      shelfLow: shelfTracked.filter(p => p.shelfQty > 0 && p.shelfQty <= (p.minShelfQty || 3)).length,
+      shelfOut: shelfTracked.filter(p => p.shelfQty === 0).length,
       totalValue: products.reduce((sum, p) => sum + p.price * p.quantity, 0),
       todayRevenue: todaySales.reduce((sum, s) => sum + s.total, 0),
     };
@@ -317,11 +412,12 @@ const DB = (() => {
   return {
     getProducts, addProduct, updateProduct, deleteProduct,
     findByBarcode, searchProducts, filterByCategory, getCategories,
-    decreaseStock, getStockStatus, getEmoji,
+    decreaseStock, getStockStatus, getWarehouseStatus, getEmoji,
     getSales, addSale, deleteSale, getTodaySales, getStats, getNextReceiptNo,
     getSettings, saveSettings,
     getShifts, getActiveShift, openShift, closeShift,
     adjustStock, getAdjustments,
+    restockShelf, receiveStock, getWarehouseLog, getWarehouseStats,
     invalidateCache,
   };
 })();

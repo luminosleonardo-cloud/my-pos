@@ -146,9 +146,32 @@ function updateSyncStatus() {
   }
 }
 
+/* ---- Theme swatches ---- */
+function renderThemeSwatches() {
+  const container = document.getElementById('theme-swatches');
+  if (!container || typeof THEMES === 'undefined') return;
+  const current = localStorage.getItem('pos_theme') || 'green';
+  container.innerHTML = Object.entries(THEMES).map(([key, t]) => `
+    <button class="theme-swatch${key === current ? ' active' : ''}"
+            onclick="selectTheme('${key}')" data-theme-key="${key}" title="${t.label}">
+      <div class="theme-swatch-dot" style="background:${t.color}"></div>
+      <span class="theme-swatch-label">${t.label}</span>
+    </button>`).join('');
+}
+
+function selectTheme(name) {
+  applyTheme(name);
+  document.querySelectorAll('.theme-swatch').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.themeKey === name);
+    const lbl = btn.querySelector('.theme-swatch-label');
+    if (lbl) lbl.style.fontWeight = btn.dataset.themeKey === name ? '700' : '';
+  });
+}
+
 /* ---- Init ---- */
 document.addEventListener('DOMContentLoaded', () => {
   loadSettings();
+  renderThemeSwatches();
   const bn = document.getElementById('brand-name');
   if (bn) bn.textContent = DB.getSettings().shopName || 'ร้านขายของชำ';
   updateSyncStatus();

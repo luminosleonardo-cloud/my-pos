@@ -43,6 +43,11 @@
           <span class="sl-icon">💹</span>
           <span class="sl-label">รายงานกำไร</span>
         </a>
+        <a href="warehouse.html" class="sidebar-link">
+          <span class="sl-icon">🏭</span>
+          <span class="sl-label">จัดชั้นวาง</span>
+          <span id="wh-badge" class="inv-badge" style="display:none">0</span>
+        </a>
         <a href="settings.html" class="sidebar-link">
           <span class="sl-icon">🏪</span>
           <span class="sl-label">ตั้งค่าร้าน</span>
@@ -292,6 +297,40 @@
               <input id="f-pack-size" class="form-input" type="number"
                      min="1" step="1" placeholder="12" value="12">
               <span class="input-addon input-addon-right">ชิ้น / แพ็ค</span>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top:8px">
+            <label class="form-label" style="cursor:pointer;display:flex;align-items:center;gap:8px">
+              <input type="checkbox" id="f-shelf-tracking" onchange="toggleShelfTracking()">
+              ติดตามสต็อกชั้นวาง (แยกจากคลัง)
+            </label>
+            <div class="form-hint">เปิดเมื่อต้องการแยกนับของบนชั้นขายและในคลังสินค้า</div>
+          </div>
+          <div id="shelf-fields" style="display:none">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">ตำแหน่งชั้นวาง</label>
+                <input id="f-shelf-location" class="form-input" type="text"
+                       placeholder="เช่น A-1, ชั้น 2 แถวซ้าย">
+              </div>
+              <div class="form-group">
+                <label class="form-label">จำนวนบนชั้นวางปัจจุบัน</label>
+                <div class="input-group">
+                  <input id="f-shelf-qty" class="form-input" type="number"
+                         min="0" step="1" placeholder="0" value="0">
+                  <span class="input-addon input-addon-right">ชิ้น</span>
+                </div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">แจ้งเตือนชั้นเหลือน้อยกว่า</label>
+              <div class="input-group">
+                <input id="f-min-shelf-qty" class="form-input" type="number"
+                       min="1" step="1" placeholder="3" value="3">
+                <span class="input-addon input-addon-right">ชิ้น</span>
+              </div>
+              <div class="form-hint">เมื่อของบนชั้นเหลือต่ำกว่านี้ จะแจ้งเตือนให้นำออกจากคลัง</div>
             </div>
           </div>
 

@@ -61,9 +61,10 @@ function renderTable() {
   tbody.innerHTML = list.map(p => {
     const status = DB.getStockStatus(p);
     const badgeMap = {
-      normal: `<span class="badge badge-success">ปกติ</span>`,
-      low:    `<span class="badge badge-warning">⚠ เหลือน้อย</span>`,
-      out:    `<span class="badge badge-danger">หมด</span>`,
+      normal:      `<span class="badge badge-success">ปกติ</span>`,
+      low:         `<span class="badge badge-warning">⚠ เหลือน้อย</span>`,
+      'shelf-low': `<span class="badge badge-info">📦 ชั้นเหลือน้อย</span>`,
+      out:         `<span class="badge badge-danger">หมด</span>`,
     };
     const iconHtml = p.image
       ? `<img src="${p.image}" alt="${p.name}" class="prod-row-img"
@@ -84,8 +85,11 @@ function renderTable() {
         <td><span class="barcode-text">${p.barcode || '—'}</span></td>
         <td style="font-weight:600">฿${fmt(p.price)}</td>
         <td>
-          <span style="font-weight:700;font-size:1rem">${p.quantity}</span>
-          <span style="font-size:0.78rem;color:var(--text-muted)"> ชิ้น</span>
+          ${(p.shelfQty !== null && p.shelfQty !== undefined)
+            ? `<div><span style="font-weight:700">${p.shelfQty}</span><span style="font-size:0.75rem;color:var(--text-muted)"> ชั้น</span></div>
+               <div><span style="font-weight:600;font-size:0.9rem">${p.quantity}</span><span style="font-size:0.75rem;color:var(--text-muted)"> คลัง</span></div>`
+            : `<span style="font-weight:700;font-size:1rem">${p.quantity}</span><span style="font-size:0.78rem;color:var(--text-muted)"> ชิ้น</span>`
+          }
         </td>
         <td>${badgeMap[status]}</td>
         <td style="color:var(--text-muted);font-size:0.82rem">${new Date(p.updatedAt).toLocaleDateString('th-TH')}</td>
@@ -112,7 +116,14 @@ function openAdd() {
   hideBarcodeProgress();
   hideImgStatus();
   clearImgPicker();
+  document.getElementById('f-shelf-tracking').checked = false;
+  document.getElementById('shelf-fields').style.display = 'none';
   openModal('modal-product');
+}
+
+function toggleShelfTracking() {
+  const on = document.getElementById('f-shelf-tracking').checked;
+  document.getElementById('shelf-fields').style.display = on ? '' : 'none';
 }
 
 function openEdit(id) {
@@ -129,6 +140,12 @@ function openEdit(id) {
   document.getElementById('f-low-stock').value  = p.lowStockThreshold;
   document.getElementById('f-pack-size').value  = p.packSize || 12;
   document.getElementById('f-category').value   = p.category;
+  const hasShelf = p.shelfQty !== null && p.shelfQty !== undefined;
+  document.getElementById('f-shelf-tracking').checked = hasShelf;
+  document.getElementById('shelf-fields').style.display = hasShelf ? '' : 'none';
+  document.getElementById('f-shelf-location').value = p.shelfLocation || '';
+  document.getElementById('f-shelf-qty').value       = hasShelf ? p.shelfQty : 0;
+  document.getElementById('f-min-shelf-qty').value   = p.minShelfQty || 3;
   if (p.image) updateImagePreview(p.image);
   else clearImage();
   if (p.costPrice) updatePriceSuggestions();
@@ -170,7 +187,12 @@ function saveProduct() {
     }
   }
 
-  const data = { name, barcode, price, costPrice, quantity, category, lowStockThreshold: lowStock, packSize, image };
+  const shelfOn  = document.getElementById('f-shelf-tracking').checked;
+  const shelfQty = shelfOn ? (parseInt(document.getElementById('f-shelf-qty').value) || 0) : null;
+  const minShelfQty  = shelfOn ? (parseInt(document.getElementById('f-min-shelf-qty').value) || 3) : 3;
+  const shelfLocation = document.getElementById('f-shelf-location').value.trim();
+  const data = { name, barcode, price, costPrice, quantity, category, lowStockThreshold: lowStock, packSize, image,
+                 shelfQty, minShelfQty, shelfLocation };
   if (editingId) {
     DB.updateProduct(editingId, data);
     showToast('แก้ไขสินค้าสำเร็จ');

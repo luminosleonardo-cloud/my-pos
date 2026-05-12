@@ -10,14 +10,17 @@
     :root {
       --green:       #16a34a;
       --green-dark:  #14532d;
+      --green-mid:   #166534;
       --green-light: #bbf7d0;
-      --green-pale:  #f0fdf4;
-      --text:        #f8fafc;
+      --green-pale:  #dcfce7;
+      --text:        #f1f5f9;
       --text-dim:    #94a3b8;
-      --bg:          #0f172a;
-      --surface:     #1e293b;
-      --border:      #334155;
-      --danger:      #f87171;
+      --text-muted:  #64748b;
+      --bg:          #0a0f1a;
+      --surface:     #141d2e;
+      --surface2:    #1a2640;
+      --border:      #2d3f5a;
+      --danger:      #fb7185;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -31,104 +34,110 @@
       overflow: hidden;
     }
 
-    /* ── Layout ─────────────────────────────── */
-    .cd-shell {
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-    }
+    /* ── Layout ──────────────────────────────── */
+    .cd-shell { display: flex; flex-direction: column; height: 100vh; }
 
-    /* ── Header ─────────────────────────────── */
+    /* ── Header ──────────────────────────────── */
     .cd-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 16px 36px;
-      background: var(--green-dark);
+      padding: 14px 32px;
+      background: linear-gradient(135deg, #0d2b1a 0%, var(--green-dark) 50%, #0d2b1a 100%);
       border-bottom: 2px solid var(--green);
       flex-shrink: 0;
+      gap: 12px;
     }
-
     .cd-shop-name {
-      font-size: 1.5rem;
+      font-size: 1.4rem;
       font-weight: 700;
       color: #fff;
       display: flex;
       align-items: center;
       gap: 10px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
     }
-
-    .cd-shop-icon {
-      font-size: 1.8rem;
-    }
-
+    .cd-shop-icon { font-size: 1.6rem; flex-shrink: 0; }
     .cd-clock {
-      font-size: 1.6rem;
+      font-size: 1.5rem;
       font-weight: 600;
       color: var(--green-light);
-      letter-spacing: 0.04em;
+      letter-spacing: 0.05em;
       font-variant-numeric: tabular-nums;
+      flex-shrink: 0;
     }
 
     /* ── Body ────────────────────────────────── */
-    .cd-body {
-      flex: 1;
-      overflow: hidden;
-      position: relative;
+    .cd-body { flex: 1; overflow: hidden; position: relative; }
+
+    /* ── Screen base ─────────────────────────── */
+    .screen {
+      position: absolute; inset: 0;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.35s ease;
     }
+    .screen.active { opacity: 1; pointer-events: auto; }
 
     /* ── Idle screen ─────────────────────────── */
-    .idle-screen {
-      position: absolute; inset: 0;
+    #idle-screen {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 24px;
-      opacity: 1;
-      transition: opacity 0.4s ease;
+      gap: 22px;
     }
-
-    .idle-screen.hidden { opacity: 0; pointer-events: none; }
-
-    .idle-icon {
-      font-size: 6rem;
+    .idle-anim {
+      position: relative;
+      width: 130px; height: 130px;
+    }
+    .idle-ring {
+      position: absolute; inset: 0;
+      border-radius: 50%;
+      border: 3px solid transparent;
+      border-top-color: var(--green);
+      animation: spin 3s linear infinite;
+    }
+    .idle-ring:nth-child(2) {
+      inset: 14px;
+      border-top-color: var(--green-light);
+      animation-duration: 1.8s;
+      animation-direction: reverse;
+    }
+    .idle-icon-inner {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 3.4rem;
       animation: float 3s ease-in-out infinite;
     }
+    @keyframes spin  { to { transform: rotate(360deg); } }
+    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
 
-    @keyframes float {
-      0%, 100% { transform: translateY(0); }
-      50%       { transform: translateY(-12px); }
+    .idle-welcome { font-size: 3.2rem; font-weight: 800; color: var(--text); }
+    .idle-sub     { font-size: 1.15rem; color: var(--text-dim); text-align: center; }
+
+    .idle-dots { display: flex; gap: 10px; align-items: center; }
+    .idle-dot  {
+      width: 9px; height: 9px; border-radius: 50%;
+      background: var(--green);
+      animation: pulse 2s ease-in-out infinite;
     }
+    .idle-dot:nth-child(2) { animation-delay: 0.35s; }
+    .idle-dot:nth-child(3) { animation-delay: 0.7s;  }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.3;transform:scale(0.65)} }
 
-    .idle-welcome {
-      font-size: 2.8rem;
-      font-weight: 700;
-      color: var(--text);
-    }
+    /* ── Active screen (2-column) ────────────── */
+    #active-screen { display: flex; flex-direction: row; }
 
-    .idle-sub {
-      font-size: 1.2rem;
-      color: var(--text-dim);
-    }
-
-    /* ── Active screen ───────────────────────── */
-    .active-screen {
-      position: absolute; inset: 0;
-      display: flex;
-      flex-direction: column;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.4s ease;
-    }
-
-    .active-screen.visible { opacity: 1; pointer-events: auto; }
-
-    /* Items table */
-    .cd-items-wrap {
+    /* Left: item table */
+    .cd-left {
       flex: 1;
+      min-width: 0;
       overflow-y: auto;
-      padding: 0 36px;
+      border-right: 1px solid var(--border);
       scrollbar-width: thin;
       scrollbar-color: var(--border) transparent;
     }
@@ -136,189 +145,227 @@
     .cd-table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 12px;
+      table-layout: fixed;
     }
 
     .cd-table thead th {
-      padding: 10px 14px;
+      padding: 11px 18px;
       text-align: left;
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: var(--text-dim);
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: var(--text-muted);
       text-transform: uppercase;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.08em;
       border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      position: sticky; top: 0; z-index: 1;
+      white-space: nowrap;
     }
-
-    .cd-table thead th:not(:first-child) { text-align: right; }
+    .th-name { width: auto; }
+    .th-qty  { width: 64px;  text-align: right !important; }
+    .th-unit { width: 108px; text-align: right !important; }
+    .th-tot  { width: 116px; text-align: right !important; }
 
     .cd-table tbody tr {
-      border-bottom: 1px solid rgba(255,255,255,0.05);
-      animation: rowIn 0.25s ease forwards;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      animation: rowIn 0.22s ease both;
     }
-
-    @keyframes rowIn {
-      from { opacity: 0; transform: translateX(-8px); }
-      to   { opacity: 1; transform: translateX(0); }
-    }
-
+    @keyframes rowIn { from{opacity:0;transform:translateX(-8px)} to{opacity:1;transform:none} }
     .cd-table tbody tr:last-child { border-bottom: none; }
+    .cd-table tbody tr:hover      { background: rgba(255,255,255,0.03); }
 
     .cd-table tbody td {
-      padding: 14px 14px;
-      font-size: 1.05rem;
+      padding: 13px 18px;
+      font-size: 1rem;
       vertical-align: middle;
     }
-
     .cd-table tbody td:not(:first-child) { text-align: right; }
 
     .td-name {
       display: flex;
       align-items: center;
       gap: 12px;
-      max-width: 0;      /* stretch in table */
+      overflow: hidden;    /* clip so name can truncate */
     }
-
     .td-img {
-      width: 44px; height: 44px;
+      width: 42px; height: 42px;
       border-radius: 8px;
       object-fit: cover;
-      background: var(--surface);
+      background: var(--surface2);
       flex-shrink: 0;
     }
-
     .td-emoji {
-      width: 44px; height: 44px;
+      width: 42px; height: 42px;
       border-radius: 8px;
-      background: var(--surface);
+      background: var(--surface2);
       display: flex; align-items: center; justify-content: center;
-      font-size: 1.4rem;
+      font-size: 1.35rem;
       flex-shrink: 0;
     }
-
-    .td-name-text { font-weight: 500; line-height: 1.3; }
-
-    .td-qty {
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: var(--green-light);
+    /* KEY FIX: prevent product name from wrapping */
+    .td-name-text {
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
-    .td-price { color: var(--text-dim); font-size: 0.95rem; }
+    .td-qty       { font-size: 1.1rem; font-weight: 700; color: var(--green-pale); white-space: nowrap; }
+    .td-price     { color: var(--text-dim); font-size: 0.92rem; white-space: nowrap; }
+    .td-line-total{ font-weight: 600; font-size: 1rem; color: #fff; white-space: nowrap; }
 
-    .td-line-total {
-      font-weight: 600;
-      font-size: 1.1rem;
-      color: #fff;
-    }
-
-    /* ── Footer totals ───────────────────────── */
-    .cd-footer {
-      flex-shrink: 0;
-      background: var(--surface);
-      border-top: 2px solid var(--border);
-      padding: 16px 36px;
-    }
-
-    .cd-summary {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 6px;
-    }
-
-    .cd-sum-row {
-      display: flex;
-      gap: 60px;
-      font-size: 1rem;
-      color: var(--text-dim);
-    }
-
-    .cd-sum-row span:last-child { min-width: 130px; text-align: right; }
-
-    .cd-sum-row.discount span { color: var(--danger); }
-
-    .cd-total-row {
-      display: flex;
-      align-items: baseline;
-      gap: 24px;
-      margin-top: 6px;
-    }
-
-    .cd-total-label {
-      font-size: 1.3rem;
-      font-weight: 600;
-      color: var(--text-dim);
-    }
-
-    .cd-total-amount {
-      font-size: 3.2rem;
-      font-weight: 800;
-      color: var(--green-light);
-      letter-spacing: -0.01em;
-      line-height: 1;
-      transition: all 0.3s ease;
-    }
-
-    /* ── Thank-you screen ────────────────────── */
-    .thankyou-screen {
-      position: absolute; inset: 0;
+    /* Right: summary / QR panel */
+    .cd-right {
+      flex: 0 0 360px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 20px;
-      background: var(--bg);
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.4s ease;
+      background: var(--surface);
+      padding: 28px 22px;
+      gap: 14px;
+      position: relative;
     }
 
-    .thankyou-screen.visible { opacity: 1; }
-
-    .ty-icon {
-      font-size: 5rem;
-      animation: popIn 0.5s cubic-bezier(0.175,0.885,0.32,1.275);
+    /* Normal summary */
+    .cd-summary-panel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      width: 100%;
+      text-align: center;
     }
-
-    @keyframes popIn {
-      from { transform: scale(0.3); opacity: 0; }
-      to   { transform: scale(1);   opacity: 1; }
+    .cd-items-count {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      letter-spacing: 0.04em;
+      background: var(--surface2);
+      padding: 4px 14px;
+      border-radius: 999px;
     }
-
-    .ty-title {
-      font-size: 3.5rem;
+    .cd-disc-rows {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 0 4px;
+    }
+    .cd-disc-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.88rem;
+      color: var(--text-dim);
+      white-space: nowrap;
+    }
+    .cd-disc-row.disc-red { color: var(--danger); }
+    .cd-divider {
+      width: 75%;
+      height: 1px;
+      background: var(--border);
+    }
+    .cd-total-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .cd-total-amount {
+      font-size: 4.2rem;
       font-weight: 800;
-      color: var(--green-light);
+      color: var(--green-pale);
+      letter-spacing: -0.02em;
+      line-height: 1;
+      transition: all 0.25s ease;
+      white-space: nowrap;
     }
 
-    .ty-amount {
-      font-size: 2rem;
-      font-weight: 600;
-      color: var(--text-dim);
+    /* QR payment panel */
+    .cd-qr-panel {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      width: 100%;
+      text-align: center;
     }
+    .cd-qr-panel.active { display: flex; }
 
-    .ty-change {
-      font-size: 1.4rem;
-      color: #fff;
+    .cd-qr-badge {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--green-pale);
       background: var(--green-dark);
-      padding: 10px 28px;
-      border-radius: 50px;
+      padding: 4px 16px;
+      border-radius: 999px;
+      border: 1px solid var(--green);
+      letter-spacing: 0.04em;
     }
-
-    .ty-footer {
-      font-size: 1rem;
+    .cd-qr-wrap {
+      background: #fff;
+      border-radius: 16px;
+      padding: 12px;
+      box-shadow: 0 0 36px rgba(22,163,74,0.35);
+    }
+    .cd-qr-amount {
+      font-size: 2.4rem;
+      font-weight: 800;
+      color: var(--green-pale);
+      line-height: 1;
+      white-space: nowrap;
+    }
+    .cd-qr-hint {
+      font-size: 0.88rem;
       color: var(--text-dim);
-      margin-top: 8px;
+      line-height: 1.5;
+    }
+    .cd-qr-no {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      background: var(--surface2);
+      padding: 4px 16px;
+      border-radius: 999px;
+      white-space: nowrap;
     }
 
-    /* ── No-connection notice ─────────────────── */
+    /* ── Thank-you screen ────────────────────── */
+    #thankyou-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+    }
+    .ty-check {
+      width: 110px; height: 110px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 3.2rem;
+      animation: popIn 0.5s cubic-bezier(0.175,0.885,0.32,1.275) both;
+      box-shadow: 0 0 60px rgba(22,163,74,0.4);
+    }
+    @keyframes popIn { from{transform:scale(0.3);opacity:0} to{transform:scale(1);opacity:1} }
+    .ty-title  { font-size: 4.2rem; font-weight: 800; color: var(--green-pale); }
+    .ty-amount { font-size: 1.5rem; font-weight: 500; color: var(--text-dim); white-space: nowrap; }
+    .ty-change {
+      font-size: 1.7rem;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(135deg, var(--green-mid), var(--green-dark));
+      padding: 10px 36px;
+      border-radius: 50px;
+      border: 1px solid var(--green);
+      white-space: nowrap;
+    }
+    .ty-footer { font-size: 1rem; color: var(--text-muted); }
+
+    /* ── No-connection ────────────────────────── */
     .no-conn {
       position: fixed;
-      bottom: 20px;
-      left: 50%;
+      bottom: 20px; left: 50%;
       transform: translateX(-50%);
-      background: rgba(0,0,0,0.7);
+      background: rgba(0,0,0,0.75);
       color: var(--text-dim);
       font-size: 0.85rem;
       padding: 8px 20px;
@@ -327,7 +374,6 @@
       border: 1px solid var(--border);
       display: none;
     }
-
     .no-conn.visible { display: block; }
   </style>
 </head>
@@ -348,49 +394,77 @@
   <div class="cd-body">
 
     <!-- Idle -->
-    <div class="idle-screen" id="idle-screen">
-      <div class="idle-icon">🛍️</div>
+    <div class="screen" id="idle-screen">
+      <div class="idle-anim">
+        <div class="idle-ring"></div>
+        <div class="idle-ring"></div>
+        <div class="idle-icon-inner">🛍️</div>
+      </div>
       <div class="idle-welcome">ยินดีต้อนรับ</div>
       <div class="idle-sub">กรุณารอสักครู่ พนักงานกำลังให้บริการ</div>
+      <div class="idle-dots">
+        <div class="idle-dot"></div>
+        <div class="idle-dot"></div>
+        <div class="idle-dot"></div>
+      </div>
     </div>
 
     <!-- Active -->
-    <div class="active-screen" id="active-screen">
-      <div class="cd-items-wrap">
+    <div class="screen" id="active-screen">
+
+      <!-- Left: items -->
+      <div class="cd-left">
         <table class="cd-table">
           <thead>
             <tr>
-              <th style="width:100%">รายการสินค้า</th>
-              <th style="white-space:nowrap">จำนวน</th>
-              <th style="white-space:nowrap">ราคา/ชิ้น</th>
-              <th style="white-space:nowrap">รวม</th>
+              <th class="th-name">รายการสินค้า</th>
+              <th class="th-qty">จำนวน</th>
+              <th class="th-unit">ราคา/ชิ้น</th>
+              <th class="th-tot">รวม</th>
             </tr>
           </thead>
           <tbody id="cd-tbody"></tbody>
         </table>
       </div>
 
-      <div class="cd-footer">
-        <div class="cd-summary">
-          <div class="cd-sum-row" id="cd-row-sub" style="display:none">
-            <span>ราคาก่อนลด</span>
-            <span id="cd-subtotal"></span>
+      <!-- Right: total / QR -->
+      <div class="cd-right">
+
+        <!-- Normal total -->
+        <div class="cd-summary-panel" id="cd-summary-panel">
+          <div class="cd-items-count" id="cd-items-count">0 รายการ</div>
+          <div class="cd-disc-rows" id="cd-disc-rows" style="display:none">
+            <div class="cd-disc-row">
+              <span>ก่อนลด</span>
+              <span id="cd-subtotal"></span>
+            </div>
+            <div class="cd-disc-row disc-red">
+              <span id="cd-disc-label">ส่วนลด</span>
+              <span id="cd-disc-amt"></span>
+            </div>
           </div>
-          <div class="cd-sum-row discount" id="cd-row-disc" style="display:none">
-            <span id="cd-disc-label">ส่วนลด</span>
-            <span id="cd-disc-amt"></span>
-          </div>
-          <div class="cd-total-row">
-            <span class="cd-total-label">ยอดที่ต้องชำระ</span>
-            <span class="cd-total-amount" id="cd-total">฿0.00</span>
-          </div>
+          <div class="cd-divider"></div>
+          <div class="cd-total-label">ยอดที่ต้องชำระ</div>
+          <div class="cd-total-amount" id="cd-total">฿0.00</div>
         </div>
+
+        <!-- QR payment -->
+        <div class="cd-qr-panel" id="cd-qr-panel">
+          <div class="cd-qr-badge">📱 QR PromptPay</div>
+          <div class="cd-qr-wrap">
+            <div id="cd-qr-code"></div>
+          </div>
+          <div class="cd-qr-amount" id="cd-qr-amount">฿0.00</div>
+          <div class="cd-qr-hint">สแกน QR เพื่อชำระเงิน</div>
+          <div class="cd-qr-no" id="cd-qr-no"></div>
+        </div>
+
       </div>
     </div>
 
     <!-- Thank you -->
-    <div class="thankyou-screen" id="thankyou-screen">
-      <div class="ty-icon">✅</div>
+    <div class="screen" id="thankyou-screen">
+      <div class="ty-check">✓</div>
       <div class="ty-title">ขอบคุณ!</div>
       <div class="ty-amount" id="ty-total"></div>
       <div class="ty-change" id="ty-change" style="display:none"></div>
@@ -403,6 +477,8 @@
 
 <div class="no-conn" id="no-conn">⚠️ รอรับสัญญาณจากเครื่องเก็บเงิน…</div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="js/promptpay.js"></script>
 <script>
 /* ── Helpers ──────────────────────────────────── */
 function fmt(n) {
@@ -420,92 +496,102 @@ tick();
 /* ── State ────────────────────────────────────── */
 let _thankyouTimer = null;
 
-/* ── Screens ──────────────────────────────────── */
-function showIdle() {
-  document.getElementById('idle-screen').classList.remove('hidden');
-  document.getElementById('active-screen').classList.remove('visible');
-  document.getElementById('thankyou-screen').classList.remove('visible');
+/* ── Screen helpers ───────────────────────────── */
+function activate(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
 }
 
-function showActive() {
-  document.getElementById('idle-screen').classList.add('hidden');
-  document.getElementById('active-screen').classList.add('visible');
-  document.getElementById('thankyou-screen').classList.remove('visible');
-}
+function showIdle()   { activate('idle-screen'); hideQR(); }
+function showActive() { activate('active-screen'); hideQR(); }
 
 function showThankyou(total, change, footer) {
   clearTimeout(_thankyouTimer);
-  document.getElementById('idle-screen').classList.add('hidden');
-  document.getElementById('active-screen').classList.remove('visible');
-  const ty = document.getElementById('thankyou-screen');
-  ty.classList.add('visible');
-
-  document.getElementById('ty-total').textContent = `ยอดชำระ ฿${fmt(total)}`;
-
-  const changeEl = document.getElementById('ty-change');
-  if (change > 0) {
-    changeEl.textContent = `เงินทอน ฿${fmt(change)}`;
-    changeEl.style.display = '';
-  } else {
-    changeEl.style.display = 'none';
-  }
-
-  document.getElementById('ty-footer').textContent = footer || 'ขอบคุณที่ใช้บริการ';
-
+  activate('thankyou-screen');
+  hideQR();
+  document.getElementById('ty-total').textContent   = `ยอดชำระ ฿${fmt(total)}`;
+  const cel = document.getElementById('ty-change');
+  if (change > 0) { cel.textContent = `เงินทอน ฿${fmt(change)}`; cel.style.display = ''; }
+  else            { cel.style.display = 'none'; }
+  document.getElementById('ty-footer').textContent  = footer || 'ขอบคุณที่ใช้บริการ';
   _thankyouTimer = setTimeout(showIdle, 6000);
 }
 
-/* ── Cart render ──────────────────────────────── */
+/* ── Emoji map ────────────────────────────────── */
 const EMOJI_MAP = {
-  'เครื่องปรุง': '🧂', 'ข้าว': '🍚', 'น้ำมัน': '🫙', 'นม': '🥛',
-  'ไข่': '🥚', 'บะหมี่': '🍜', 'เครื่องดื่ม': '🥤', 'ผัก': '🥦',
-  'ผลไม้': '🍎', 'ขนม': '🍬', 'ของใช้': '🧴', 'อื่นๆ': '📦',
+  'เครื่องปรุง':'🧂','ข้าว':'🍚','น้ำมัน':'🫙','นม':'🥛',
+  'ไข่':'🥚','บะหมี่':'🍜','เครื่องดื่ม':'🥤','ผัก':'🥦',
+  'ผลไม้':'🍎','ขนม':'🍬','ของใช้':'🧴','อื่นๆ':'📦',
 };
+function getEmoji(cat) { return EMOJI_MAP[cat] || '📦'; }
 
-function getEmoji(category) {
-  return EMOJI_MAP[category] || '📦';
-}
-
+/* ── Cart render ──────────────────────────────── */
 function renderCart(data) {
   clearTimeout(_thankyouTimer);
-
-  if (!data.cart || data.cart.length === 0) {
-    showIdle();
-    return;
-  }
-
+  if (!data.cart || !data.cart.length) { showIdle(); return; }
   showActive();
 
-  const tbody = document.getElementById('cd-tbody');
-  tbody.innerHTML = data.cart.map(item => {
+  document.getElementById('cd-tbody').innerHTML = data.cart.map(item => {
     const thumb = item.image
-      ? `<img src="${item.image}" class="td-img" alt="${item.name}"
+      ? `<img src="${item.image}" class="td-img" alt=""
              onerror="this.outerHTML='<div class=\\'td-emoji\\'>${getEmoji(item.category)}</div>'">`
       : `<div class="td-emoji">${getEmoji(item.category)}</div>`;
-    return `
-      <tr>
-        <td><div class="td-name">${thumb}<span class="td-name-text">${item.name}</span></div></td>
-        <td class="td-qty">×${item.qty}</td>
-        <td class="td-price">฿${fmt(item.price)}</td>
-        <td class="td-line-total">฿${fmt(item.lineTotal)}</td>
-      </tr>`;
+    return `<tr>
+      <td><div class="td-name">${thumb}<span class="td-name-text">${item.name}</span></div></td>
+      <td class="td-qty">×${item.qty}</td>
+      <td class="td-price">฿${fmt(item.price)}</td>
+      <td class="td-line-total">฿${fmt(item.lineTotal)}</td>
+    </tr>`;
   }).join('');
 
-  document.getElementById('cd-total').textContent = `฿${fmt(data.total)}`;
+  const totalStr = `฿${fmt(data.total)}`;
+  document.getElementById('cd-total').textContent    = totalStr;
+  document.getElementById('cd-qr-amount').textContent = totalStr;
 
-  const rowSub  = document.getElementById('cd-row-sub');
-  const rowDisc = document.getElementById('cd-row-disc');
+  const totalItems = data.cart.reduce((s, i) => s + i.qty, 0);
+  document.getElementById('cd-items-count').textContent =
+    `${totalItems} ชิ้น · ${data.cart.length} รายการ`;
 
+  const discEl = document.getElementById('cd-disc-rows');
   if (data.discountAmt > 0) {
     document.getElementById('cd-subtotal').textContent   = `฿${fmt(data.subtotal)}`;
     document.getElementById('cd-disc-amt').textContent   = `−฿${fmt(data.discountAmt)}`;
     document.getElementById('cd-disc-label').textContent = data.discountLabel || 'ส่วนลด';
-    rowSub.style.display  = '';
-    rowDisc.style.display = '';
+    discEl.style.display = '';
   } else {
-    rowSub.style.display  = 'none';
-    rowDisc.style.display = 'none';
+    discEl.style.display = 'none';
   }
+}
+
+/* ── QR payment ───────────────────────────────── */
+function showQR(promptpay, total) {
+  document.getElementById('active-screen').classList.add('active');
+  document.getElementById('idle-screen').classList.remove('active');
+
+  document.getElementById('cd-summary-panel').style.display = 'none';
+  document.getElementById('cd-qr-panel').classList.add('active');
+
+  document.getElementById('cd-qr-amount').textContent = `฿${fmt(total)}`;
+  document.getElementById('cd-qr-no').textContent =
+    promptpay ? `PromptPay: ${promptpay}` : '';
+
+  const wrap = document.getElementById('cd-qr-code');
+  wrap.innerHTML = '';
+  if (promptpay && typeof PromptPay !== 'undefined') {
+    try {
+      const text = PromptPay.build(promptpay, total);
+      new QRCode(wrap, {
+        text, width: 250, height: 250,
+        colorDark: '#000', colorLight: '#fff',
+        correctLevel: QRCode.CorrectLevel.M,
+      });
+    } catch {}
+  }
+}
+
+function hideQR() {
+  document.getElementById('cd-qr-panel').classList.remove('active');
+  document.getElementById('cd-summary-panel').style.display = '';
 }
 
 /* ── BroadcastChannel ─────────────────────────── */
@@ -521,18 +607,12 @@ function connect() {
       if (msg.shopName)
         document.getElementById('shop-name').textContent = msg.shopName;
 
-      if (msg.type === 'cart_update') {
-        renderCart(msg);
-      } else if (msg.type === 'payment_done') {
-        showThankyou(msg.total, msg.change, msg.footer);
-      } else if (msg.type === 'cart_clear') {
-        showIdle();
-      } else if (msg.type === 'ping') {
-        /* respond so POS knows we're open */
-        channel.postMessage({ type: 'pong' });
-      }
+      if      (msg.type === 'cart_update')   renderCart(msg);
+      else if (msg.type === 'qr_show')       showQR(msg.promptpay, msg.total);
+      else if (msg.type === 'payment_done')  showThankyou(msg.total, msg.change, msg.footer);
+      else if (msg.type === 'cart_clear')    showIdle();
+      else if (msg.type === 'ping')          channel.postMessage({ type: 'pong' });
     };
-    /* Request a state refresh from the POS */
     channel.postMessage({ type: 'request_state' });
   } catch {
     document.getElementById('no-conn').classList.add('visible');
@@ -541,11 +621,20 @@ function connect() {
 
 connect();
 
-/* Show the no-conn notice if we haven't heard anything in 8 s */
+/* Start on idle screen immediately (no transition flash) */
+document.addEventListener('DOMContentLoaded', () => {
+  const idle = document.getElementById('idle-screen');
+  idle.style.transition = 'none';
+  idle.classList.add('active');
+  requestAnimationFrame(() => requestAnimationFrame(() => { idle.style.transition = ''; }));
+});
+
+/* Show "no signal" notice if idle after 8s */
 setTimeout(() => {
-  if (document.getElementById('idle-screen').offsetParent !== null) {
-    document.getElementById('no-conn').classList.add('visible');
-    setTimeout(() => document.getElementById('no-conn').classList.remove('visible'), 5000);
+  if (document.getElementById('idle-screen').classList.contains('active')) {
+    const nc = document.getElementById('no-conn');
+    nc.classList.add('visible');
+    setTimeout(() => nc.classList.remove('visible'), 5000);
   }
 }, 8000);
 </script>

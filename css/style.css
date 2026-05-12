@@ -45,6 +45,85 @@
 }
 
 /* ============================================================
+   Themes — override primary palette + navbar per data-theme
+   ============================================================ */
+:root[data-theme="blue"] {
+  --primary:       #0284c7;
+  --primary-dark:  #0c4a6e;
+  --primary-hover: #0369a1;
+  --primary-light: #f0f9ff;
+  --primary-mid:   #bae6fd;
+  --navbar:        #0c4a6e;
+}
+:root[data-theme="purple"] {
+  --primary:       #7c3aed;
+  --primary-dark:  #4c1d95;
+  --primary-hover: #6d28d9;
+  --primary-light: #f5f3ff;
+  --primary-mid:   #ddd6fe;
+  --navbar:        #4c1d95;
+}
+:root[data-theme="orange"] {
+  --primary:       #ea580c;
+  --primary-dark:  #7c2d12;
+  --primary-hover: #c2410c;
+  --primary-light: #fff7ed;
+  --primary-mid:   #fed7aa;
+  --navbar:        #7c2d12;
+}
+:root[data-theme="rose"] {
+  --primary:       #e11d48;
+  --primary-dark:  #881337;
+  --primary-hover: #be123c;
+  --primary-light: #fff1f2;
+  --primary-mid:   #fecdd3;
+  --navbar:        #881337;
+}
+:root[data-theme="teal"] {
+  --primary:       #0d9488;
+  --primary-dark:  #134e4a;
+  --primary-hover: #0f766e;
+  --primary-light: #f0fdfa;
+  --primary-mid:   #99f6e4;
+  --navbar:        #134e4a;
+}
+
+/* ============================================================
+   Theme swatch picker (settings page)
+   ============================================================ */
+.theme-swatches {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.theme-swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: var(--radius);
+  border: 2px solid transparent;
+  transition: border-color 0.15s, transform 0.1s;
+  background: none;
+  font-family: inherit;
+}
+.theme-swatch:hover  { transform: translateY(-2px); }
+.theme-swatch.active { border-color: var(--primary); }
+.theme-swatch-dot {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+}
+.theme-swatch-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.theme-swatch.active .theme-swatch-label { color: var(--primary); font-weight: 700; }
+
+/* ============================================================
    Reset & Base
    ============================================================ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -3014,3 +3093,122 @@ ul { list-style: none; }
   opacity: 0.8;
   border-top: 1px dashed #cbd5e1;
 }
+
+/* ============================================================
+   Shelf-low stock badge (POS product card)
+   ============================================================ */
+.stock-badge.shelf-low {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+/* ============================================================
+   badge-info (inventory table)
+   ============================================================ */
+.badge-info {
+  background: #dbeafe;
+  color: #1d4ed8;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* ============================================================
+   Warehouse page layout
+   ============================================================ */
+.wh-layout {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 20px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.stat-icon.orange { background: #fff7ed; color: #ea580c; }
+.stat-icon.blue   { background: #eff6ff; color: #2563eb; }
+
+/* Filter tabs row */
+.wh-filter-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Qty display in warehouse table */
+.wh-qty-shelf {
+  font-weight: 700;
+  font-size: 1rem;
+}
+.wh-untracked {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+.wh-location-tag {
+  display: inline-block;
+  background: #f1f5f9;
+  color: #334155;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* Modal info block */
+.wh-modal-info {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.wh-info-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+.wh-info-row span:last-child { color: var(--text); }
+
+/* Activity log */
+.wh-log-section {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+}
+.wh-log-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.wh-log-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+.wh-log-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.wh-log-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--bg);
+  border-radius: 8px;
+  font-size: 0.87rem;
+}
+.wh-log-icon { font-size: 1.1rem; flex-shrink: 0; }
+.wh-log-info { flex: 1; min-width: 0; }
+.wh-log-name { font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wh-log-sub  { color: var(--text-muted); font-size: 0.8rem; }
+.wh-log-time { color: var(--text-muted); font-size: 0.78rem; white-space: nowrap; flex-shrink: 0; }
+.wh-log-empty { color: var(--text-muted); font-size: 0.88rem; text-align: center; padding: 12px 0; margin: 0; }

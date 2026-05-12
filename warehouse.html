@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>จัดชั้นวาง — ร้านขายของชำ</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#16a34a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="POS ชำ">
+  <link rel="apple-touch-icon" href="icons/icon.svg">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <div class="app-shell">
+
+    <!-- ========== SIDEBAR ========== -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon">🏭</div>
+        <span class="brand-name" id="brand-name">ร้านขายของชำ</span>
+        <span id="sync-dot" class="sync-dot" title="ไม่ได้เชื่อมต่อ cloud"></span>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="index.html" class="sidebar-link">
+          <span class="sl-icon">🛒</span>
+          <span class="sl-label">หน้าขาย (POS)</span>
+        </a>
+        <a href="inventory.html" class="sidebar-link">
+          <span class="sl-icon">📦</span>
+          <span class="sl-label">คลังสินค้า</span>
+          <span id="inv-badge" class="inv-badge" style="display:none">0</span>
+        </a>
+        <a href="sales.html" class="sidebar-link">
+          <span class="sl-icon">📊</span>
+          <span class="sl-label">ประวัติการขาย</span>
+        </a>
+        <a href="reports.html" class="sidebar-link">
+          <span class="sl-icon">💹</span>
+          <span class="sl-label">รายงานกำไร</span>
+        </a>
+        <a href="warehouse.html" class="sidebar-link active">
+          <span class="sl-icon">🏭</span>
+          <span class="sl-label">จัดชั้นวาง</span>
+          <span id="wh-badge" class="inv-badge" style="display:none">0</span>
+        </a>
+        <a href="settings.html" class="sidebar-link">
+          <span class="sl-icon">🏪</span>
+          <span class="sl-label">ตั้งค่าร้าน</span>
+        </a>
+        <a href="#" class="sidebar-link" onclick="openShiftModal();return false">
+          <span class="sl-icon">⏰</span>
+          <span class="sl-label" id="shift-link-text">เปิด/ปิดกะ</span>
+          <span id="shift-indicator" class="hw-dot"></span>
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <span id="clock" class="sidebar-clock"></span>
+      </div>
+    </aside>
+
+    <!-- ========== MAIN ========== -->
+    <main class="app-main scrollable">
+
+      <div class="wh-layout">
+
+        <!-- Stats -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon blue">🏭</div>
+            <div class="stat-content">
+              <div id="wh-stat-tracked" class="stat-value">—</div>
+              <div class="stat-label">สินค้าติดตามชั้น</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon orange">📋</div>
+            <div class="stat-content">
+              <div id="wh-stat-shelf-alert" class="stat-value">—</div>
+              <div class="stat-label">ชั้นต้องเติม</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon yellow">⚠️</div>
+            <div class="stat-content">
+              <div id="wh-stat-wh-alert" class="stat-value">—</div>
+              <div class="stat-label">คลังเหลือน้อย</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon red">🚫</div>
+            <div class="stat-content">
+              <div id="wh-stat-wh-out" class="stat-value">—</div>
+              <div class="stat-label">คลังหมดสต็อก</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter tabs -->
+        <div class="wh-filter-tabs">
+          <button class="tab-btn active" onclick="setWhFilter('all', this)">ทั้งหมด</button>
+          <button class="tab-btn" onclick="setWhFilter('shelf-alert', this)">🟠 ชั้นต้องเติม</button>
+          <button class="tab-btn" onclick="setWhFilter('wh-alert', this)">🟡 คลังเหลือน้อย</button>
+          <button class="tab-btn" onclick="setWhFilter('tracked', this)">ติดตามชั้น</button>
+        </div>
+
+        <!-- Search -->
+        <div class="inv-controls" style="margin-bottom:0">
+          <div class="inv-search">
+            <span class="search-icon">🔍</span>
+            <input id="wh-search" type="text" placeholder="ค้นหาสินค้า บาร์โค้ด ตำแหน่ง…" autocomplete="off">
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="table-card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>สินค้า</th>
+                <th>ตำแหน่งชั้น</th>
+                <th>บนชั้นวาง</th>
+                <th>ในคลัง</th>
+                <th>สถานะ</th>
+                <th>จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="wh-tbody">
+              <tr><td colspan="6">
+                <div class="empty-state"><div class="es-icon">⏳</div><h3>กำลังโหลด…</h3></div>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Activity Log -->
+        <div class="wh-log-section">
+          <div class="wh-log-header">
+            <h3 class="wh-log-title">ประวัติการเคลื่อนไหวล่าสุด</h3>
+            <button class="btn btn-ghost btn-sm" onclick="renderWhLog()">🔄 รีเฟรช</button>
+          </div>
+          <div id="wh-log-list" class="wh-log-list"></div>
+        </div>
+
+      </div>
+
+    </main>
+  </div><!-- /app-shell -->
+
+  <!-- ========== MODAL: Restock Shelf ========== -->
+  <div id="modal-restock" class="modal-backdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">📋 เติมของขึ้นชั้นวาง</span>
+        <button class="modal-close" onclick="closeModal('modal-restock')">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-weight:600;font-size:1rem;margin-bottom:4px" id="rs-product-name"></p>
+        <div class="wh-modal-info">
+          <div class="wh-info-row">
+            <span>บนชั้นวาง</span>
+            <span id="rs-shelf-qty" style="font-weight:700">—</span>
+          </div>
+          <div class="wh-info-row">
+            <span>ในคลัง (ที่โอนได้)</span>
+            <span id="rs-wh-qty" style="font-weight:700">—</span>
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:14px">
+          <label class="form-label">จำนวนที่จะโอนขึ้นชั้น (ชิ้น)</label>
+          <div class="input-group">
+            <input id="rs-qty" class="form-input" type="number" min="1" step="1" placeholder="0">
+            <span class="input-addon input-addon-right">ชิ้น</span>
+          </div>
+        </div>
+        <div class="adj-pack-btns">
+          <span class="adj-pack-label">เติมด่วน:</span>
+          <button type="button" class="btn btn-outline btn-sm" onclick="rsQuick(1)">+1 ชิ้น</button>
+          <button type="button" class="btn btn-outline btn-sm" id="rs-btn-half"></button>
+          <button type="button" class="btn btn-outline btn-sm" id="rs-btn-full"></button>
+        </div>
+        <div class="form-group" style="margin-top:12px">
+          <label class="form-label">หมายเหตุ</label>
+          <input id="rs-note" class="form-input" type="text" placeholder="ไม่บังคับ">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal('modal-restock')">ยกเลิก</button>
+        <button class="btn btn-primary" onclick="confirmRestock()">✅ เติมชั้น</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL: Receive Stock ========== -->
+  <div id="modal-receive" class="modal-backdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">📦 รับสินค้าเข้าคลัง</span>
+        <button class="modal-close" onclick="closeModal('modal-receive')">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-weight:600;font-size:1rem;margin-bottom:4px" id="rv-product-name"></p>
+        <div class="wh-modal-info">
+          <div class="wh-info-row">
+            <span>ในคลังปัจจุบัน</span>
+            <span id="rv-wh-qty" style="font-weight:700">—</span>
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:14px">
+          <label class="form-label">จำนวนที่รับเข้า (ชิ้น)</label>
+          <div class="input-group">
+            <input id="rv-qty" class="form-input" type="number" min="1" step="1" placeholder="0">
+            <span class="input-addon input-addon-right">ชิ้น</span>
+          </div>
+        </div>
+        <div class="adj-pack-btns">
+          <span class="adj-pack-label">รับด่วน:</span>
+          <button type="button" class="btn btn-outline btn-sm" id="rv-btn-half"></button>
+          <button type="button" class="btn btn-outline btn-sm" id="rv-btn-full"></button>
+          <button type="button" class="btn btn-outline btn-sm" id="rv-btn-double"></button>
+        </div>
+        <div class="form-group" style="margin-top:12px">
+          <label class="form-label">หมายเหตุ</label>
+          <input id="rv-note" class="form-input" type="text" placeholder="ไม่บังคับ เช่น ล็อตวันที่ รอบส่ง">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal('modal-receive')">ยกเลิก</button>
+        <button class="btn btn-primary" onclick="confirmReceive()">✅ รับเข้าคลัง</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast container -->
+  <div id="toast-container"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/shared.js"></script>
+  <script src="js/sync.js"></script>
+  <script src="js/warehouse.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
+    document.addEventListener('DOMContentLoaded', () => Sync.init());
+  </script>
+</body>
+</html>

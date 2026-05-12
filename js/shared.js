@@ -3,6 +3,29 @@
    (settings modal, shift management, clock, modal helpers)
    ============================================================ */
 
+/* ---- Theme engine ---- */
+const THEMES = {
+  green:  { label: 'เขียว',  color: '#16a34a' },
+  blue:   { label: 'น้ำเงิน', color: '#0284c7' },
+  purple: { label: 'ม่วง',   color: '#7c3aed' },
+  orange: { label: 'ส้ม',    color: '#ea580c' },
+  rose:   { label: 'ชมพู',   color: '#e11d48' },
+  teal:   { label: 'ฟ้า',    color: '#0d9488' },
+};
+
+function applyTheme(name) {
+  const theme = THEMES[name] ? name : 'green';
+  if (theme === 'green') {
+    document.documentElement.removeAttribute('data-theme');
+  } else {
+    document.documentElement.setAttribute('data-theme', theme);
+  }
+  localStorage.setItem('pos_theme', theme);
+}
+
+/* Apply immediately on script load (before DOMContentLoaded) to avoid flash */
+applyTheme(localStorage.getItem('pos_theme') || 'green');
+
 /* ---- Global helpers (available on every page) ---- */
 function fmt(n) {
   return Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 });
@@ -34,7 +57,7 @@ function _sharedUpdateClock() {
   el.textContent = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
-/* ---- Low stock badge on inventory sidebar link ---- */
+/* ---- Low stock badge on inventory sidebar link (warehouse qty) ---- */
 function updateInventoryBadge() {
   const badge = document.getElementById('inv-badge');
   if (!badge) return;
@@ -45,8 +68,25 @@ function updateInventoryBadge() {
   badge.textContent = total;
   badge.style.display = total > 0 ? 'flex' : 'none';
   const parts = [];
-  if (outCount > 0) parts.push(`🔴 หมดสต็อก ${outCount} รายการ`);
-  if (lowCount > 0) parts.push(`🟡 เหลือน้อย ${lowCount} รายการ`);
+  if (outCount > 0) parts.push(`🔴 หมดคลัง ${outCount} รายการ`);
+  if (lowCount > 0) parts.push(`🟡 คลังเหลือน้อย ${lowCount} รายการ`);
+  badge.setAttribute('data-tooltip', parts.join('\n'));
+}
+
+/* ---- Low shelf badge on warehouse sidebar link (shelf qty) ---- */
+function updateWarehouseBadge() {
+  const badge = document.getElementById('wh-badge');
+  if (!badge) return;
+  const products = DB.getProducts();
+  const tracked = products.filter(p => p.shelfQty !== null && p.shelfQty !== undefined);
+  const shelfOut = tracked.filter(p => p.shelfQty === 0).length;
+  const shelfLow = tracked.filter(p => p.shelfQty > 0 && p.shelfQty <= (p.minShelfQty || 3)).length;
+  const total = shelfOut + shelfLow;
+  badge.textContent = total;
+  badge.style.display = total > 0 ? 'flex' : 'none';
+  const parts = [];
+  if (shelfOut > 0) parts.push(`🟠 ชั้นหมด ${shelfOut} รายการ`);
+  if (shelfLow > 0) parts.push(`🔵 ชั้นเหลือน้อย ${shelfLow} รายการ`);
   badge.setAttribute('data-tooltip', parts.join('\n'));
 }
 
@@ -355,6 +395,7 @@ document.addEventListener('DOMContentLoaded', () => {
   _injectSharedModals();
   updateShiftUI();
   updateInventoryBadge();
+  updateWarehouseBadge();
 
   const bn = document.getElementById('brand-name');
   if (bn) bn.textContent = DB.getSettings().shopName || 'ร้านขายของชำ';

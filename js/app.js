@@ -45,14 +45,45 @@ function _broadcastCart() {
   });
 }
 
-function openCustomerDisplay() {
+async function openCustomerDisplay() {
+  if (!_displayChannel) _openDisplayChannel();
+
+  /* If window already open, just focus and re-sync */
   if (_displayWin && !_displayWin.closed) {
     _displayWin.focus();
-  } else {
-    _displayWin = window.open('customer-display.html', 'customer_display',
-      'width=1024,height=600,menubar=no,toolbar=no,location=no,status=no');
+    _broadcastCart();
+    return;
   }
-  if (!_displayChannel) _openDisplayChannel();
+
+  /* Try Window Management API (Chrome 100+) — place on second screen */
+  if ('getScreenDetails' in window) {
+    try {
+      const details = await window.getScreenDetails();
+      const second  = details.screens.find(s => s !== details.currentScreen) || details.currentScreen;
+      _displayWin   = window.open(
+        'customer-display.html', 'customer_display',
+        `left=${second.availLeft},top=${second.availTop},` +
+        `width=${second.availWidth},height=${second.availHeight},` +
+        'menubar=no,toolbar=no,location=no,status=no'
+      );
+      /* Ask the new window to go fullscreen after it loads */
+      if (_displayWin) {
+        _displayWin.addEventListener('load', () => {
+          try { _displayWin.document.documentElement.requestFullscreen?.(); } catch {}
+        }, { once: true });
+      }
+      return;
+    } catch {
+      /* Permission denied or API unavailable — fall through */
+    }
+  }
+
+  /* Fallback: open to the right of the current screen (common dual-monitor setup) */
+  _displayWin = window.open(
+    'customer-display.html', 'customer_display',
+    `left=${screen.width},top=0,width=${screen.width},height=${screen.height},` +
+    'menubar=no,toolbar=no,location=no,status=no'
+  );
 }
 
 /* ---- Helpers ---- */
@@ -122,12 +153,20 @@ function renderProducts() {
 
   grid.innerHTML = list.map(p => {
     const status = DB.getStockStatus(p);
-    const badgeMap = { normal: '', low: '<span class="stock-badge low">เหลือน้อย</span>', out: '<span class="stock-badge out">หมด</span>' };
     const thumbInner = p.image
       ? `<img src="${p.image}" alt="${p.name}"
              onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
          <span class="thumb-emoji" style="display:none">${DB.getEmoji(p.category)}</span>`
       : `<span class="thumb-emoji">${DB.getEmoji(p.category)}</span>`;
+    const badgeMap = {
+      normal: '',
+      low: '<span class="stock-badge low">เหลือน้อย</span>',
+      'shelf-low': '<span class="stock-badge shelf-low">ชั้นเหลือน้อย</span>',
+      out: '<span class="stock-badge out">หมด</span>',
+    };
+    const hasShelf = p.shelfQty !== null && p.shelfQty !== undefined;
+    const displayQty = hasShelf ? p.shelfQty : p.quantity;
+    const qtyLabel   = hasShelf ? 'บนชั้น' : 'คงเหลือ';
     return `
       <div class="product-card ${status === 'out' ? 'out-of-stock' : ''}"
            onclick="addToCart('${p.id}')">
@@ -135,7 +174,7 @@ function renderProducts() {
         <div class="product-thumb">${thumbInner}</div>
         <div class="product-name">${p.name}</div>
         <div class="product-price">฿${fmt(p.price)}</div>
-        <div class="product-stock-label">คงเหลือ ${p.quantity}</div>
+        <div class="product-stock-label">${qtyLabel} ${displayQty}</div>
       </div>`;
   }).join('');
 }
@@ -163,7 +202,7 @@ function loadCart() {
       .map(entry => {
         const product = allProducts.find(p => p.id === entry.id);
         if (!product) return null;
-        return { product, qty: Math.min(entry.qty, product.quantity || 0) };
+        return { product, qty: Math.min(entry.qty, _availQty(product) || 0) };
       })
       .filter(Boolean)
       .filter(i => i.qty > 0);
@@ -208,14 +247,20 @@ function cartItemHTML(p, qty) {
 }
 
 /* ---- Cart ---- */
+function _availQty(product) {
+  return (product.shelfQty !== null && product.shelfQty !== undefined)
+    ? product.shelfQty : product.quantity;
+}
+
 function addToCart(productId) {
   const product = allProducts.find(p => p.id === productId);
-  if (!product || product.quantity === 0) return;
+  const avail = product ? _availQty(product) : 0;
+  if (!product || avail === 0) return;
 
   const existing = cart.find(i => i.product.id === productId);
   if (existing) {
-    if (existing.qty >= product.quantity) {
-      showToast(`สินค้าคงเหลือเพียง ${product.quantity} ชิ้น`, 'warning');
+    if (existing.qty >= avail) {
+      showToast(`สินค้าคงเหลือเพียง ${avail} ชิ้น`, 'warning');
       return;
     }
     existing.qty++;
@@ -229,12 +274,13 @@ function addToCart(productId) {
 function changeQty(productId, delta) {
   const item = cart.find(i => i.product.id === productId);
   if (!item) return;
+  const avail = _availQty(item.product);
   item.qty += delta;
   if (item.qty <= 0) {
     cart = cart.filter(i => i.product.id !== productId);
-  } else if (item.qty > item.product.quantity) {
-    item.qty = item.product.quantity;
-    showToast(`สินค้าคงเหลือเพียง ${item.product.quantity} ชิ้น`, 'warning');
+  } else if (item.qty > avail) {
+    item.qty = avail;
+    showToast(`สินค้าคงเหลือเพียง ${avail} ชิ้น`, 'warning');
   }
   if (cart.length > 0) saveCart();
   renderCart();
@@ -419,9 +465,23 @@ function switchPayMethod(method) {
     PromptPay.render(document.getElementById('qr-canvas-wrap'), s.promptpay, total);
     document.getElementById('qr-promptpay-no').textContent = s.promptpay || '—';
     document.getElementById('btn-confirm-pay').disabled = !s.promptpay;
+    if (_displayChannel) {
+      _displayChannel.postMessage({
+        type: 'qr_show',
+        shopName: s.shopName || 'ร้านขายของชำ',
+        promptpay: s.promptpay,
+        total,
+      });
+    }
   } else {
     updateChange();
+    _broadcastCart();
   }
+}
+
+function closePaymentModal() {
+  closeModal('modal-payment');
+  _broadcastCart();
 }
 
 function updateChange() {
@@ -548,7 +608,7 @@ function handleBarcode(code) {
     renderProducts();
     return;
   }
-  if (product.quantity === 0) {
+  if (_availQty(product) === 0) {
     showToast(`${product.name} หมดสต็อก`, 'error');
     return;
   }

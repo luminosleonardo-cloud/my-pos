@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
@@ -41,6 +41,11 @@
         <a href="reports.html" class="sidebar-link">
           <span class="sl-icon">💹</span>
           <span class="sl-label">รายงานกำไร</span>
+        </a>
+        <a href="warehouse.html" class="sidebar-link">
+          <span class="sl-icon">🏭</span>
+          <span class="sl-label">จัดชั้นวาง</span>
+          <span id="wh-badge" class="inv-badge" style="display:none">0</span>
         </a>
         <a href="settings.html" class="sidebar-link active">
           <span class="sl-icon">🏪</span>
@@ -98,6 +103,15 @@
               <label class="form-label">ข้อความท้ายใบเสร็จ</label>
               <input id="set-footer" class="form-input" type="text" placeholder="ขอบคุณที่ใช้บริการ">
             </div>
+          </div>
+        </div>
+
+        <!-- ── Section: Theme ── -->
+        <div class="settings-section">
+          <div class="settings-section-title">🎨 ธีมสี</div>
+          <div class="settings-section-body">
+            <p class="form-hint" style="margin-bottom:14px">เปลี่ยนสีหลักของแอปได้ทันที — ใช้กับทุกหน้า</p>
+            <div class="theme-swatches" id="theme-swatches"></div>
           </div>
         </div>
 
