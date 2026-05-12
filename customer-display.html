@@ -441,6 +441,118 @@
       display: none;
     }
     .no-conn.visible { display: block; }
+
+    /* ════════════════════════════════════════
+       RESPONSIVE
+       ════════════════════════════════════════ */
+
+    /* ── Medium: 641–960px (tablet landscape / small monitor) ── */
+    @media (max-width: 960px) {
+      .cd-header       { padding: 10px 20px; }
+      .cd-shop-name    { font-size: 1.15rem; }
+      .cd-clock        { font-size: 1.2rem; }
+
+      .cd-right        { flex: 0 0 270px; padding: 20px 16px; }
+      .cd-total-amount { font-size: 3.2rem; }
+      .cd-qr-amount    { font-size: 1.9rem; }
+
+      /* Drop unit-price column to save space */
+      .th-unit, .td-price { display: none; }
+      .th-tot          { width: 96px; }
+
+      .cd-table thead th,
+      .cd-table tbody td { padding: 10px 12px; }
+
+      .idle-welcome    { font-size: 2.6rem; }
+      .ty-title        { font-size: 3.4rem; }
+    }
+
+    /* ── Small: ≤640px (tablet portrait / phone) ── */
+    @media (max-width: 640px) {
+      /* Header */
+      .cd-header       { padding: 8px 14px; }
+      .cd-shop-name    { font-size: 0.95rem; }
+      .cd-shop-icon    { font-size: 1.2rem; }
+      .cd-clock        { font-size: 0.9rem; letter-spacing: 0; }
+      .cd-close-btn    { width: 28px; height: 28px; font-size: 0.8rem; }
+
+      /* Active screen: stack — items list on top, summary bar on bottom */
+      #active-screen   { flex-direction: column; }
+
+      .cd-left {
+        flex: 1;
+        min-height: 0;
+        border-right: none;
+      }
+
+      .cd-right {
+        flex: 0 0 auto;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 16px;
+        gap: 8px;
+        border-top: 1px solid var(--border);
+      }
+
+      /* Summary: count on left, total on right */
+      .cd-summary-panel {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        gap: 12px;
+      }
+      .cd-divider,
+      .cd-total-label,
+      .cd-disc-rows    { display: none; }
+      .cd-total-amount { font-size: 2rem; }
+      .cd-items-count  { font-size: 0.8rem; padding: 3px 10px; }
+
+      /* QR panel: compact */
+      .cd-qr-panel     { width: 100%; }
+      .cd-qr-amount    { font-size: 1.5rem; }
+      .cd-qr-badge     { font-size: 0.78rem; }
+      .cd-qr-hint      { font-size: 0.78rem; }
+
+      /* Table */
+      .th-unit, .td-price { display: none; }
+      .th-qty          { width: 42px; }
+      .th-tot          { width: 72px; }
+      .td-img,
+      .td-emoji        { width: 30px; height: 30px; font-size: 0.95rem; }
+      .td-name         { gap: 8px; }
+      .cd-table thead th,
+      .cd-table tbody td { padding: 7px 10px; font-size: 0.88rem; }
+      .td-qty          { font-size: 0.95rem; }
+      .td-line-total   { font-size: 0.9rem; }
+
+      /* Idle */
+      .idle-anim       { width: 90px; height: 90px; }
+      .idle-icon-inner { font-size: 2.4rem; }
+      .idle-welcome    { font-size: 2rem; }
+      .idle-sub        { font-size: 0.9rem; padding: 0 16px; }
+      #idle-screen     { gap: 16px; }
+
+      /* Thank-you */
+      #thankyou-screen { gap: 12px; }
+      .ty-check        { width: 80px; height: 80px; font-size: 2.4rem; }
+      .ty-title        { font-size: 3rem; }
+      .ty-amount       { font-size: 1.2rem; }
+      .ty-change       { font-size: 1.3rem; padding: 8px 24px; }
+      .ty-footer       { font-size: 0.85rem; }
+    }
+
+    /* ── Very small: ≤400px (compact phone) ── */
+    @media (max-width: 400px) {
+      .cd-total-amount { font-size: 1.6rem; }
+      .idle-welcome    { font-size: 1.6rem; }
+      .idle-anim       { width: 70px; height: 70px; }
+      .idle-icon-inner { font-size: 2rem; }
+      .ty-title        { font-size: 2.4rem; }
+      .ty-check        { width: 68px; height: 68px; font-size: 2rem; }
+    }
   </style>
 </head>
 <body>
@@ -690,9 +802,11 @@ function showQR(promptpay, total) {
   wrap.innerHTML = '';
   if (promptpay && typeof PromptPay !== 'undefined') {
     try {
-      const text = PromptPay.build(promptpay, total);
+      const text    = PromptPay.build(promptpay, total);
+      const side    = Math.min(window.innerWidth, window.innerHeight);
+      const qrSize  = side <= 400 ? 140 : side <= 640 ? 170 : 250;
       new QRCode(wrap, {
-        text, width: 250, height: 250,
+        text, width: qrSize, height: qrSize,
         colorDark: '#000', colorLight: '#fff',
         correctLevel: QRCode.CorrectLevel.M,
       });
