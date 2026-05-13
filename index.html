@@ -372,8 +372,8 @@
           <div class="form-group" id="hw-codepage-row">
             <label class="form-label">Code Page</label>
             <select id="hw-codepage" class="form-input form-select" onchange="Printer.saveSettingsUI()">
+              <option value="21">21 — CP874 / Windows Thai</option>
               <option value="20">20 — TIS-620</option>
-              <option value="21">21 — CP874 (Windows)</option>
             </select>
           </div>
         </div>
@@ -551,6 +551,7 @@
   <script src="js/sync.js"></script>
   <script src="js/agents.js"></script>
   <script src="js/barcode.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script src="js/printer.js"></script>
   <script src="js/promptpay.js"></script>
   <script>

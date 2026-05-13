@@ -4,7 +4,7 @@
    update cache in background → next load gets fresh files.
    ============================================================ */
 
-const CACHE_NAME = 'pos-v2.5';
+const CACHE_NAME = 'pos-v2.8';
 
 const LOCAL_ASSETS = [
   './',
@@ -36,6 +36,7 @@ const LOCAL_ASSETS = [
 /* External CDN libraries — cached normally via stale-while-revalidate */
 const CACHE_CDNS = [
   'cdn.jsdelivr.net/npm/chart.js',
+  'cdn.jsdelivr.net/npm/html2canvas',
 ];
 
 /* External APIs — never cache */

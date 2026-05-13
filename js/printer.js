@@ -38,7 +38,7 @@ const Printer = (() => {
       drawerMode: localStorage.getItem('hw_drawer')            || 'auto',
       drawerPin:  localStorage.getItem('hw_drawer_pin')        || '0',
       printMode:  localStorage.getItem('hw_print_mode')        || 'text',  // 'text' | 'image'
-      codePage:   Number(localStorage.getItem('hw_codepage')   || 20),     // 20=TIS-620, 21=CP874
+      codePage:   Number(localStorage.getItem('hw_codepage')   || 21),     // 21=CP874 (1B 74 15), 20=TIS-620
     };
   }
   function saveCfg(obj) {
@@ -509,21 +509,75 @@ const Printer = (() => {
   }
 
   /* ══════════════════════════════════════════════════════════
+     Screenshot-based image renderer
+     Renders the actual HTML receipt into a hidden off-screen
+     div at paper width, captures via html2canvas at 2x, then
+     downscales to printer dot resolution before raster send.
+  */
+  async function _printHTMLScreenshot(htmlStr) {
+    const dotsW = cfg().paper === 80 ? 576 : 384;
+    const SC    = 2;
+
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText =
+      `position:fixed;left:-9999px;top:0;width:${dotsW}px;background:#fff;overflow:hidden`;
+
+    /* Inject receipt HTML + scoped overrides:
+       - Force receipt to fill full paper width
+       - Hide tear-edge decoration (CSS gradient doesn't raster usefully) */
+    wrapper.innerHTML =
+      `<style>
+        .receipt-v2{max-width:none!important;width:${dotsW}px!important;margin:0!important;padding:8px 6px!important}
+        .rcpt-tear{display:none!important}
+      </style>` + htmlStr;
+
+    document.body.appendChild(wrapper);
+    await document.fonts.ready;
+    await new Promise(r => requestAnimationFrame(r));
+    await new Promise(r => requestAnimationFrame(r));
+
+    try {
+      const raw = await html2canvas(wrapper, {
+        width:           dotsW,
+        scale:           SC,
+        backgroundColor: '#ffffff',
+        logging:         false,
+        useCORS:         false,
+      });
+      /* Downscale 2x capture to printer dot width */
+      const out = document.createElement('canvas');
+      out.width  = dotsW;
+      out.height = Math.ceil(raw.height / SC);
+      out.getContext('2d').drawImage(raw, 0, 0, dotsW, out.height);
+      await _sendRaster(out);
+    } finally {
+      document.body.removeChild(wrapper);
+    }
+  }
+
+  /* ══════════════════════════════════════════════════════════
      Public print functions
   */
   async function printReceipt(saleItems, total, cash, change, meta = {}) {
     if (!connected()) return false;
-    const s     = _shopSettings();
-    const lines = _buildLines(saleItems, total, cash, change, meta, s);
-    const mode  = cfg().printMode;
+    const s    = _shopSettings();
+    const mode = cfg().printMode;
 
     await _bytes(CMD.INIT);
     if (mode === 'image') {
-      await _printImageLines(lines);
+      /* Screenshot the rendered HTML receipt; fall back to canvas drawing if
+         html2canvas or buildReceiptHTML is not available on this page */
+      if (typeof html2canvas !== 'undefined' && typeof buildReceiptHTML === 'function') {
+        await _printHTMLScreenshot(
+          buildReceiptHTML(saleItems, total, cash, change, meta, { showSuccess: false })
+        );
+      } else {
+        await _printImageLines(_buildLines(saleItems, total, cash, change, meta, s));
+      }
     } else {
       await _bytes([ESC, 0x74, cfg().codePage]);
       await _bytes(CMD.CHARSET_THAI);
-      await _printTextLines(lines);
+      await _printTextLines(_buildLines(saleItems, total, cash, change, meta, s));
       await _text('\n\n\n');
     }
     await _bytes(CMD.CUT);
