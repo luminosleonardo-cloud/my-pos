@@ -240,9 +240,12 @@ function deleteSale(id) {
 }
 
 /* ---- Reprint receipt ---- */
+let _reprintSaleId = null;
+
 function reprintReceipt(saleId) {
   const sale = DB.getSales().find(s => s.id === saleId);
   if (!sale) return;
+  _reprintSaleId = saleId;
   const saleItems = sale.items.map(i => ({ product: { name: i.name, price: i.price, category: '' }, qty: i.qty }));
   const meta = {
     subtotal:      sale.subtotal ?? sale.total,
@@ -255,6 +258,8 @@ function reprintReceipt(saleId) {
   document.getElementById('reprint-content').innerHTML =
     buildReceiptHTML(saleItems, sale.total, sale.cash || sale.total, sale.change || 0,
       meta, { showSuccess: false, createdAt: sale.createdAt });
+  const thermalBtn = document.getElementById('btn-thermal-reprint');
+  if (thermalBtn) thermalBtn.style.display = (typeof Printer !== 'undefined') ? '' : 'none';
   openModal('modal-reprint');
 }
 
