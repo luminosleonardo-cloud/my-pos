@@ -1167,9 +1167,14 @@ ul { list-style: none; }
    Receipt
    ============================================================ */
 .receipt {
-  font-family: 'Courier New', monospace;
-  font-size: 0.88rem;
+  width: 384px;
+    font-family: 'Kanit', sans-serif; /* แนะนำฟอนต์ไม่มีหัวจะอ่านง่ายขึ้น */
+    font-size: 24px;   /* ปรับให้ใหญ่ขึ้นตามต้องการ เช่น 24px หรือ 30px */
+    line-height: 1.2;
+    color: #000;
+    background: #fff;
   line-height: 1.6;
+}
 }
 .receipt-header { text-align: center; margin-bottom: 12px; }
 .receipt-header h2 { font-size: 1.2rem; }
