@@ -21,6 +21,7 @@ const Printer = (() => {
     SIZE_NORMAL:  [ESC, 0x21, 0x00],
     SIZE_DOUBLE_H:[ESC, 0x21, 0x10],
     CHARSET_THAI: [ESC, 0x52, 0x0E],   // ESC R 14 = Thai charset
+    FEED:         [ESC, 0x64, 0x02],   // ESC d 2  = feed 2 lines
   };
 
   /* ── State ─────────────────────────────────────────────── */
@@ -37,7 +38,7 @@ const Printer = (() => {
       paper:      Number(localStorage.getItem('hw_paper')      || 58),
       drawerMode: localStorage.getItem('hw_drawer')            || 'auto',
       drawerPin:  localStorage.getItem('hw_drawer_pin')        || '0',
-      printMode:  localStorage.getItem('hw_print_mode')        || 'text',  // 'text' | 'image'
+      printMode:  localStorage.getItem('hw_print_mode')        || 'image', // 'image' | 'text'
       codePage:   Number(localStorage.getItem('hw_codepage')   || 21),     // 21=CP874 (1B 74 15), 20=TIS-620
     };
   }
@@ -70,12 +71,12 @@ const Printer = (() => {
   async function _writeBT(data) {
     if (!btChar) return;
     const arr = data instanceof Uint8Array ? data : new Uint8Array(data);
-    const CHUNK = 512;
+    const CHUNK = 128;   // conservative MTU — prevents buffer overflow on XP-58
     for (let i = 0; i < arr.length; i += CHUNK) {
       const sl = arr.slice(i, i + CHUNK);
       if (btChar.properties.writeWithoutResponse) await btChar.writeValueWithoutResponse(sl);
       else await btChar.writeValue(sl);
-      if (arr.length > CHUNK) await new Promise(r => setTimeout(r, 20));
+      if (arr.length > CHUNK) await new Promise(r => setTimeout(r, 10));
     }
   }
 
@@ -484,14 +485,34 @@ const Printer = (() => {
     const W   = canvas.width, H = canvas.height;
     const pix = canvas.getContext('2d').getImageData(0, 0, W, H).data;
     const bpr = Math.ceil(W / 8);
-    const bmp = new Uint8Array(bpr * H);
 
+    /* Floyd-Steinberg dithering → 1-bit bitmap
+       Converts each pixel to grayscale then diffuses the quantisation
+       error to neighbours — gives sharper edges and smoother gradients
+       on thermal paper compared to a hard threshold. */
+    const gray = new Float32Array(W * H);
+    for (let i = 0; i < W * H; i++) {
+      const p = i * 4;
+      gray[i] = (pix[p] * 299 + pix[p + 1] * 587 + pix[p + 2] * 114) / 1000;
+    }
+
+    const bmp = new Uint8Array(bpr * H);
     for (let y = 0; y < H; y++) {
       for (let x = 0; x < W; x++) {
-        const i = (y * W + x) * 4;
-        /* Weighted luminance (rec. 601) */
-        const lum = (pix[i] * 299 + pix[i + 1] * 587 + pix[i + 2] * 114) / 1000;
-        if (lum < 128) bmp[y * bpr + (x >> 3)] |= 0x80 >> (x & 7);
+        const idx = y * W + x;
+        const old = Math.max(0, Math.min(255, gray[idx]));
+        const neu = old < 128 ? 0 : 255;
+        const err = old - neu;
+        gray[idx] = neu;
+
+        if (x + 1 < W)       gray[idx + 1]         += err * 7 / 16;
+        if (y + 1 < H) {
+          if (x > 0)         gray[idx + W - 1]     += err * 3 / 16;
+                             gray[idx + W]         += err * 5 / 16;
+          if (x + 1 < W)     gray[idx + W + 1]     += err * 1 / 16;
+        }
+
+        if (neu === 0) bmp[y * bpr + (x >> 3)] |= 0x80 >> (x & 7);
       }
     }
 
@@ -500,34 +521,38 @@ const Printer = (() => {
     const yL = H   & 0xFF, yH = H   >> 8;
     await _bytes([GS, 0x76, 0x30, 0x00, xL, xH, yL, yH]);
 
-    /* Send bitmap in chunks for BLE compatibility */
-    const CHUNK = 2048;
-    for (let i = 0; i < bmp.length; i += CHUNK) {
-      await _bytes(bmp.slice(i, i + CHUNK));
-    }
-    await _bytes([0x0A, 0x0A, 0x0A]);   // 3 line feeds after image
+    /* _writeBT re-chunks at 128 bytes with 10ms gap per the XP-58 workflow */
+    await _bytes(bmp);
+    await _bytes(CMD.FEED);   // ESC d 2 — feed 2 lines so user can tear
   }
 
   /* ══════════════════════════════════════════════════════════
      Screenshot-based image renderer
-     Renders the actual HTML receipt into a hidden off-screen
-     div at paper width, captures via html2canvas at 2x, then
-     downscales to printer dot resolution before raster send.
+     Creates a hidden 384px-wide print template, forces pure
+     black-on-white for maximum thermal contrast, captures via
+     html2canvas at scale:1 (1 CSS px = 1 printer dot), then
+     sends the raster bitmap to the printer.
   */
   async function _printHTMLScreenshot(htmlStr) {
     const dotsW = cfg().paper === 80 ? 576 : 384;
-    const SC    = 2;
 
     const wrapper = document.createElement('div');
     wrapper.style.cssText =
-      `position:fixed;left:-9999px;top:0;width:${dotsW}px;background:#fff;overflow:hidden`;
+      `position:fixed;left:-9999px;top:0;width:${dotsW}px;` +
+      `background:#ffffff;color:#000000;overflow:hidden`;
 
-    /* Inject receipt HTML + scoped overrides:
-       - Force receipt to fill full paper width
-       - Hide tear-edge decoration (CSS gradient doesn't raster usefully) */
+    /* Pure B&W override: forces maximum contrast for thermal paper.
+       Also hides the CSS-gradient tear decoration which doesn't raster. */
     wrapper.innerHTML =
       `<style>
-        .receipt-v2{max-width:none!important;width:${dotsW}px!important;margin:0!important;padding:8px 6px!important}
+        .receipt-v2{
+          max-width:none!important;width:${dotsW}px!important;
+          margin:0!important;padding:8px 6px!important;
+          color:#000000!important;background:#ffffff!important}
+        .receipt-v2 *{
+          color:#000000!important;background-color:transparent!important;
+          box-shadow:none!important;text-shadow:none!important}
+        .rcpt-line{border-top-color:#000000!important}
         .rcpt-tear{display:none!important}
       </style>` + htmlStr;
 
@@ -537,19 +562,15 @@ const Printer = (() => {
     await new Promise(r => requestAnimationFrame(r));
 
     try {
-      const raw = await html2canvas(wrapper, {
+      /* scale:1 — each CSS pixel maps directly to one printer dot (384dpi) */
+      const canvas = await html2canvas(wrapper, {
         width:           dotsW,
-        scale:           SC,
+        scale:           1,
         backgroundColor: '#ffffff',
         logging:         false,
         useCORS:         false,
       });
-      /* Downscale 2x capture to printer dot width */
-      const out = document.createElement('canvas');
-      out.width  = dotsW;
-      out.height = Math.ceil(raw.height / SC);
-      out.getContext('2d').drawImage(raw, 0, 0, dotsW, out.height);
-      await _sendRaster(out);
+      await _sendRaster(canvas);
     } finally {
       document.body.removeChild(wrapper);
     }
