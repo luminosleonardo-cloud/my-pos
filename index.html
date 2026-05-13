@@ -360,6 +360,24 @@
           </div>
         </div>
 
+        <!-- Thai print mode -->
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">โหมดพิมพ์ภาษาไทย</label>
+            <select id="hw-print-mode" class="form-input form-select" onchange="Printer.saveSettingsUI()">
+              <option value="text">ข้อความ TIS-620 (เร็ว)</option>
+              <option value="image">รูปภาพ Canvas (รองรับทุกเครื่องพิมพ์)</option>
+            </select>
+          </div>
+          <div class="form-group" id="hw-codepage-row">
+            <label class="form-label">Code Page</label>
+            <select id="hw-codepage" class="form-input form-select" onchange="Printer.saveSettingsUI()">
+              <option value="20">20 — TIS-620</option>
+              <option value="21">21 — CP874 (Windows)</option>
+            </select>
+          </div>
+        </div>
+
         <!-- Drawer section -->
         <div class="hw-section">
           <div class="hw-section-title">💰 ลิ้นชักเงิน</div>
