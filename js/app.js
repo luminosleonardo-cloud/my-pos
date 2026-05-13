@@ -549,8 +549,11 @@ function confirmPayment() {
 
   if (Printer.connected()) {
     Printer.printReceipt(saleItems, total, cash, change, meta).catch(() => {});
-  } else if (Printer.cfg().drawerMode === 'auto' && currentPayMethod === 'cash') {
-    Printer.openDrawer().catch(() => {});
+  } else {
+    Printer.setPending(saleItems, total, cash, change, meta);
+    if (Printer.cfg().drawerMode === 'auto' && currentPayMethod === 'cash') {
+      Printer.openDrawer().catch(() => {});
+    }
   }
 
   /* broadcast payment-done to customer display */
