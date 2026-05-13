@@ -1167,7 +1167,7 @@ ul { list-style: none; }
    Receipt
    ============================================================ */
 .receipt {
-  font-family: 'Kanit', sans-serif;
+  font-family: 'Courier New', monospace;
   font-size: 0.88rem;
   line-height: 1.6;
 }
