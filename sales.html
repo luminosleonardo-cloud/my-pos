@@ -139,6 +139,8 @@
       </div>
       <div class="modal-footer">
         <button class="btn btn-ghost" onclick="window.print()">🖨️ พิมพ์ (PDF)</button>
+        <button id="btn-thermal-reprint" class="btn btn-outline" style="display:none"
+                onclick="thermalReprintSale(_reprintSaleId)">🖨️ พิมพ์ความร้อน</button>
         <button class="btn btn-primary" onclick="closeModal('modal-reprint')">ปิด</button>
       </div>
     </div>
@@ -153,6 +155,7 @@
   <script src="js/shared.js"></script>
   <script src="js/sync.js"></script>
   <script src="js/agents.js"></script>
+  <script src="js/printer.js"></script>
   <script src="js/sales.js"></script>
   <script>
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
