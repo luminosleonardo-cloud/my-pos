@@ -4,7 +4,7 @@
    update cache in background → next load gets fresh files.
    ============================================================ */
 
-const CACHE_NAME = 'pos-v2.10';
+const CACHE_NAME = 'pos-v2.11';
 
 const LOCAL_ASSETS = [
   './',

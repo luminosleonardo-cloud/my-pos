@@ -562,13 +562,17 @@ const Printer = (() => {
     await new Promise(r => requestAnimationFrame(r));
 
     try {
-      /* scale:1 — each CSS pixel maps directly to one printer dot (384dpi) */
+      /* scale:1 — each CSS pixel maps directly to one printer dot (384dpi)
+         foreignObjectRendering:true — use browser's native SVG render pipeline
+         so Thai vowel/tone-mark placement is handled by the OS font engine,
+         not html2canvas's own CSS parser                                      */
       const canvas = await html2canvas(wrapper, {
-        width:           dotsW,
-        scale:           1,
-        backgroundColor: '#ffffff',
-        logging:         false,
-        useCORS:         false,
+        width:                  dotsW,
+        scale:                  1,
+        backgroundColor:        '#ffffff',
+        logging:                false,
+        useCORS:                false,
+        foreignObjectRendering: true,
       });
       await _sendRaster(canvas);
     } finally {
