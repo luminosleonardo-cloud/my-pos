@@ -530,23 +530,26 @@ const Printer = (() => {
      Screenshot-based image renderer
      Creates a hidden 384px-wide print template, forces pure
      black-on-white for maximum thermal contrast, captures via
-     html2canvas at scale:1 (1 CSS px = 1 printer dot), then
-     sends the raster bitmap to the printer.
+     captures at the receipt's screen design width then scales up to
+     printer dot resolution — preserves standard font proportions.
   */
   async function _printHTMLScreenshot(htmlStr) {
-    const dotsW = cfg().paper === 80 ? 576 : 384;
+    const dotsW   = cfg().paper === 80 ? 576 : 384;
+    /* Receipt is designed for this CSS width (matches buildReceiptHTML) */
+    const designW = cfg().paper === 80 ? 302 : 220;
+    /* Scale factor: stretch design pixels up to printer dots */
+    const SC      = dotsW / designW;   // 58mm ≈ 1.745×  |  80mm ≈ 1.907×
 
     const wrapper = document.createElement('div');
     wrapper.style.cssText =
-      `position:fixed;left:-9999px;top:0;width:${dotsW}px;` +
+      `position:fixed;left:-9999px;top:0;width:${designW}px;` +
       `background:#ffffff;color:#000000;overflow:hidden`;
 
-    /* Pure B&W override: forces maximum contrast for thermal paper.
-       Also hides the CSS-gradient tear decoration which doesn't raster. */
+    /* Pure B&W override + keep receipt at its designed width */
     wrapper.innerHTML =
       `<style>
         .receipt-v2{
-          max-width:none!important;width:${dotsW}px!important;
+          max-width:none!important;width:${designW}px!important;
           margin:0!important;padding:8px 6px!important;
           color:#000000!important;background:#ffffff!important}
         .receipt-v2 *{
@@ -562,18 +565,26 @@ const Printer = (() => {
     await new Promise(r => requestAnimationFrame(r));
 
     try {
-      /* scale:1 — each CSS pixel maps directly to one printer dot (384dpi)
-         foreignObjectRendering:true — use browser's native SVG render pipeline
-         so Thai vowel/tone-mark placement is handled by the OS font engine,
-         not html2canvas's own CSS parser                                      */
-      const canvas = await html2canvas(wrapper, {
-        width:                  dotsW,
-        scale:                  1,
+      /* Render at design width, scale up to printer resolution.
+         foreignObjectRendering: browser's native SVG pipeline handles
+         Thai vowel/tone-mark stacking via the OS font engine.          */
+      const raw = await html2canvas(wrapper, {
+        width:                  designW,
+        scale:                  SC,
         backgroundColor:        '#ffffff',
         logging:                false,
         useCORS:                false,
         foreignObjectRendering: true,
       });
+
+      /* Normalise to exact dotsW in case of floating-point rounding */
+      let canvas = raw;
+      if (raw.width !== dotsW) {
+        canvas        = document.createElement('canvas');
+        canvas.width  = dotsW;
+        canvas.height = Math.round(raw.height * dotsW / raw.width);
+        canvas.getContext('2d').drawImage(raw, 0, 0, dotsW, canvas.height);
+      }
       await _sendRaster(canvas);
     } finally {
       document.body.removeChild(wrapper);
