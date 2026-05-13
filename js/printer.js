@@ -444,7 +444,7 @@ const Printer = (() => {
       const fs = ln.big ? FS.big : (ln.bold ? FS.bold : (ln.small ? FS.small : FS.normal));
       const fw = (ln.big || ln.bold) ? '700' : '400';
       const lh = ln.big ? LH.big : LH.normal;
-      ctx.font      = `${fw} ${fs}px Sarabun, Tahoma, sans-serif`;
+      ctx.font      = `${fw} ${fs}px Kanit, Tahoma, sans-serif`;
       ctx.fillStyle = '#000';
 
       if (ln.align === 'center') {
@@ -462,7 +462,7 @@ const Printer = (() => {
       y += lh;
 
       if (ln.sub) {
-        ctx.font      = `400 ${FS.small}px Sarabun, Tahoma, sans-serif`;
+        ctx.font      = `400 ${FS.small}px Kanit, Tahoma, sans-serif`;
         ctx.fillStyle = '#444';
         ctx.textAlign = 'left';
         ctx.fillText(ln.sub, PX, y + FS.small * 0.85);
@@ -551,11 +551,13 @@ const Printer = (() => {
         .receipt-v2{
           max-width:none!important;width:${designW}px!important;
           margin:0!important;padding:8px 6px!important;
+          font-family:'Kanit',sans-serif!important;
           color:#000000!important;background:#ffffff!important}
         .receipt-v2 *{
-          color:#000000!important;background-color:transparent!important;
+          font-family:'Kanit',sans-serif!important;
+          color:#000000!important;background-color:#ffffff!important;
           box-shadow:none!important;text-shadow:none!important}
-        .rcpt-line{border-top-color:#000000!important}
+        .rcpt-line{border-top-color:#000000!important;background:#ffffff!important}
         .rcpt-tear{display:none!important}
       </style>` + htmlStr;
 
