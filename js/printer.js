@@ -568,15 +568,15 @@ const Printer = (() => {
 
     try {
       /* Render at design width, scale up to printer resolution.
-         foreignObjectRendering: browser's native SVG pipeline handles
-         Thai vowel/tone-mark stacking via the OS font engine.          */
+         Standard html2canvas (no foreignObjectRendering) reads
+         getComputedStyle() which resolves CSS variables correctly,
+         and canvas2d fillText renders Kanit Thai glyphs properly. */
       const raw = await html2canvas(wrapper, {
-        width:                  designW,
-        scale:                  SC,
-        backgroundColor:        '#ffffff',
-        logging:                false,
-        useCORS:                false,
-        foreignObjectRendering: true,
+        width:           designW,
+        scale:           SC,
+        backgroundColor: '#ffffff',
+        logging:         false,
+        useCORS:         false,
       });
 
       /* Normalise to exact dotsW in case of floating-point rounding */
