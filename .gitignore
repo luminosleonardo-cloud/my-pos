@@ -1,0 +1,16 @@
+# Claude Code local settings
+.claude/
+
+# Planning / scratch notes
+agents.md
+plan3.md
+planing.md
+plandign2.md
+
+# Test / scratch HTML files
+product_barcode_agent.html
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
