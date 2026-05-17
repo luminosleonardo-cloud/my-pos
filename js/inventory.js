@@ -207,7 +207,7 @@ function saveProduct() {
 }
 
 /* ---- Image upload ---- */
-function resizeImageCanvas(source, MAX = 300) {
+function resizeImageCanvas(source, MAX = 300, format = 'image/jpeg') {
   let w = source.videoWidth ?? source.naturalWidth ?? source.width;
   let h = source.videoHeight ?? source.naturalHeight ?? source.height;
   if (w > h) { if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; } }
@@ -215,7 +215,7 @@ function resizeImageCanvas(source, MAX = 300) {
   const canvas = document.createElement('canvas');
   canvas.width = w; canvas.height = h;
   canvas.getContext('2d').drawImage(source, 0, 0, w, h);
-  return canvas.toDataURL('image/jpeg', 0.82);
+  return canvas.toDataURL(format, format === 'image/jpeg' ? 0.82 : undefined);
 }
 
 function handleImageUpload(e) {
@@ -235,6 +235,7 @@ function updateImagePreview(url) {
   document.getElementById('img-preview').src               = url;
   document.getElementById('img-preview').style.display     = 'block';
   document.getElementById('img-placeholder').style.display = 'none';
+  document.getElementById('btn-rmbg').style.display        = 'inline-flex';
   document.getElementById('btn-clear-img').style.display   = 'inline-flex';
 }
 
@@ -244,6 +245,47 @@ function clearImage() {
   document.getElementById('img-preview').style.display     = 'none';
   document.getElementById('img-placeholder').style.display = 'flex';
   document.getElementById('btn-clear-img').style.display   = 'none';
+  document.getElementById('btn-rmbg').style.display        = 'none';
+}
+
+/* ---- Background removal ---- */
+async function removeImgBg() {
+  const url = document.getElementById('f-image').value;
+  if (!url) return;
+
+  const btn = document.getElementById('btn-rmbg');
+  btn.disabled = true;
+  btn.textContent = '⏳ กำลังโหลด…';
+
+  try {
+    const { removeBackground } = await import(
+      'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.4.5/dist/bundle.browser.esm.js'
+    );
+
+    const blob = await removeBackground(url, {
+      publicPath: 'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.4.5/dist/',
+      debug: false,
+      progress: (key, current, total) => {
+        if (total > 0) {
+          btn.textContent = `⏳ ${Math.round(current / total * 100)}%`;
+        }
+      },
+    });
+
+    /* resize PNG (preserves transparency) to 300px max */
+    const imgEl = new Image();
+    imgEl.onload = () => {
+      URL.revokeObjectURL(imgEl.src);
+      updateImagePreview(resizeImageCanvas(imgEl, 300, 'image/png'));
+      showToast('ตัดพื้นหลังสำเร็จ');
+    };
+    imgEl.src = URL.createObjectURL(blob);
+  } catch (err) {
+    showToast('ตัดพื้นหลังไม่สำเร็จ', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🪄 ตัดพื้นหลัง';
+  }
 }
 
 /* ---- Photo camera ---- */

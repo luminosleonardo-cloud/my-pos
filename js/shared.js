@@ -380,7 +380,7 @@ function _injectSharedModals() {
   });
 }
 
-const APP_VERSION = 'v2026.05.11';
+const APP_VERSION = 'v2026.05.18';
 
 function copyShopId() {
   const id = document.getElementById('set-shop-id')?.value || localStorage.getItem('shop_id') || '';
@@ -415,4 +415,21 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(_sharedUpdateClock, 1000);
     _sharedUpdateClock();
   }
+
+  /* Touch fallback for bottom nav links on iOS/Android tablets.
+     Without this, links inside overflow-x:auto containers get their
+     click events swallowed by the browser's scroll-disambiguation. */
+  let _navTouchY = 0, _navTouchX = 0;
+  document.querySelector('.sidebar-nav')?.addEventListener('touchstart', e => {
+    _navTouchX = e.touches[0].clientX;
+    _navTouchY = e.touches[0].clientY;
+  }, { passive: true });
+  document.querySelector('.sidebar-nav')?.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - _navTouchX;
+    const dy = e.changedTouches[0].clientY - _navTouchY;
+    if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
+      const link = e.target.closest('a.sidebar-link');
+      if (link) { e.preventDefault(); link.click(); }
+    }
+  }, { passive: false });
 });
